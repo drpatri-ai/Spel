@@ -2,7 +2,7 @@
 
 Webbversionen av Bucinca Spel – 4 i rad, Schack, Paf!, Block och Tornet med Leah, Leon, Patriot och Hanna.
 
-Spela: **https://drpatri-ai.github.io/spel/**
+Spela: **https://drpatri-ai.github.io/Spel/**
 
 På iPhone/iPad: öppna länken i Safari → Dela → *Lägg till på hemskärmen*. Fungerar även offline efter första besöket.
 

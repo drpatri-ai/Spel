@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Spel</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#8B7BFF">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(160deg,#FFB3D9 0%,#C9A7FF 40%,#7FD1FF 75%,#9BE38A 100%)}
+#hub{justify-content:flex-start;overflow-y:auto;padding-top:calc(var(--safe-t) + 10px)}
+.games{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:min(94vw,560px);padding-bottom:6px}
+@media (min-aspect-ratio:5/4){.games{grid-template-columns:repeat(3,minmax(0,1fr));width:min(94vw,860px)}}
+@media (min-width:900px) and (min-aspect-ratio:5/4){.games{grid-template-columns:repeat(5,minmax(0,1fr));width:min(96vw,1200px)}}
+.game{--c:#FF8A3D;--d:#D9621A;background:var(--card);border-radius:26px;padding:14px 10px 12px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  box-shadow:0 6px 0 #C9C3E8;position:relative;transition:transform .15s;text-align:center;overflow:hidden}
+.game:active{transform:scale(.95)}
+.game .ic{width:clamp(70px,20vmin,110px);aspect-ratio:1;border-radius:24px;background:linear-gradient(150deg,color-mix(in srgb,var(--c) 70%,#fff),var(--c));
+  box-shadow:0 5px 0 var(--d);display:grid;place-items:center;font-size:clamp(38px,11vmin,60px);animation:hop 1.6s ease-in-out infinite}
+.game:nth-child(2) .ic{animation-delay:.2s}.game:nth-child(3) .ic{animation-delay:.4s}.game:nth-child(4) .ic{animation-delay:.6s}.game:nth-child(5) .ic{animation-delay:.8s}
+.game b{font-size:clamp(18px,4.6vmin,24px)}
+.game small{font-size:clamp(12px,3vmin,15px);color:var(--muted);line-height:1.2}
+.game .best{font-size:clamp(12px,3vmin,14px);font-weight:600;color:var(--d)}
+.game .new{position:absolute;top:10px;right:-28px;transform:rotate(35deg);background:#FF4D6D;color:#fff;font-size:12px;font-weight:700;padding:3px 30px}
+.hubbtns{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;padding-bottom:16px}
+.hubbtns .btn{min-width:0}
+#hub .logo .l1{font-size:clamp(44px,13vmin,96px)}
+#hub .logo .l2{font-size:clamp(34px,10vmin,72px)}
+#hub .dance .av{width:clamp(48px,12vmin,80px)}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #hub .logo{flex-direction:row;gap:14px;align-items:baseline}
+  #hub .logo .l1{font-size:44px}#hub .logo .l2{font-size:40px}
+  #hub .dance{display:none}
+}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="hub" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div class="dance" id="dance"></div>
+  <div class="games" id="games"></div>
+  <div class="hubbtns">
+    <button class="btn purple small" id="toChars">🎭 Figurer</button>
+    <button class="btn pink small" id="toSettings">⚙️ Ljud & vibration</button>
+  </div>
+</section>
+
+<section id="chars" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Figurer 🎭</h2><span style="width:48px"></span></div>
+  <div class="list" id="charList"></div>
+</section>
+
+<section id="settings" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Inställningar</h2><span style="width:48px"></span></div>
+  <div class="list" id="setList"></div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="hub.js"></script>
+</body>
+</html>

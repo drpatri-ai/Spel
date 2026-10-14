@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Block</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#8B7BFF">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(165deg,#3A2E8C 0%,#5B49C9 45%,#2E8BD6 100%)}
+#bg i{background:#ffffff1f}
+h2,.hint-txt{color:#fff}
+.hint-txt{opacity:.85}
+.char.chosen{box-shadow:0 6px 0 var(--d),0 0 0 5px var(--c)}
+
+/* meny */
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:10px 16px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:64px}
+.me b{font-size:20px}
+.me small{display:block;color:var(--muted)}
+.bestbox{color:#fff;font-weight:700;font-size:clamp(18px,4.6vmin,24px);text-shadow:0 2px 0 #0004}
+
+/* spel */
+#game{justify-content:flex-start;gap:8px;touch-action:none}
+.gtop{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.scorebox{display:flex;flex-direction:column;align-items:center;color:#fff;line-height:1}
+.score{font-size:clamp(40px,11vmin,72px);font-weight:700;text-shadow:0 4px 0 #0005}
+.bestline{font-size:clamp(13px,3.4vmin,17px);opacity:.85;margin-top:4px}
+.arena{flex:1;width:100%;display:grid;grid-template-columns:1fr;grid-template-areas:"cheer" "board" "tray";grid-template-rows:auto auto 1fr;
+  justify-items:center;align-content:start;gap:10px;min-height:0}
+.cheer{grid-area:cheer;display:flex;align-items:center;gap:10px;position:relative;min-height:54px}
+.cheer .av{width:clamp(46px,11vmin,64px)}
+.cheer .combo{color:#FFD23F;font-weight:700;font-size:clamp(16px,4vmin,22px);text-shadow:0 2px 0 #0005;opacity:0;transition:opacity .2s}
+.cheer .combo.on{opacity:1;animation:bob 1s ease-in-out infinite}
+.bubble{position:absolute;left:calc(100% + 4px);top:50%;transform:translate(0,-50%) scale(0);transform-origin:left center;background:#fff;color:var(--ink);
+  font-weight:700;padding:8px 14px;border-radius:16px;white-space:nowrap;font-size:clamp(14px,3.6vmin,19px);z-index:20;box-shadow:0 6px 16px #0004;
+  transition:transform .25s cubic-bezier(.2,1.6,.4,1);pointer-events:none}
+.bubble::before{content:"";position:absolute;left:-8px;top:50%;margin-top:-8px;border:8px solid transparent;border-left:0;border-right-color:#fff}
+.bubble.show{transform:translate(0,-50%) scale(1)}
+.cheer .av.hop{animation:wiggle .5s ease-in-out 2}
+@keyframes wiggle{25%{transform:rotate(-14deg) scale(1.15)}75%{transform:rotate(14deg) scale(1.15)}}
+
+.board{grid-area:board;--bs:min(94vw,calc(100dvh - 330px),620px);width:var(--bs);aspect-ratio:1;background:#1F1A55cc;border-radius:16px;padding:1.2%;
+  display:grid;grid-template-columns:repeat(8,1fr);gap:1.1%;box-shadow:0 8px 0 #15113D,inset 0 0 0 3px #ffffff1a;position:relative}
+.cell{border-radius:16%;background:#ffffff12;position:relative}
+.cell.f,.blk{background:var(--k);box-shadow:inset 0 -.32em 0 #0003,inset 0 .26em 0 #fff6,inset 0 0 0 .1em #0002}
+.cell.f{animation:place .22s cubic-bezier(.2,1.8,.4,1)}
+@keyframes place{from{transform:scale(.6)}}
+.cell.g{background:var(--k);opacity:.45}
+.cell.wc::after{content:"";position:absolute;inset:-6%;border-radius:20%;box-shadow:0 0 0 .18em #fff,0 0 1em #fff;animation:wcp .5s ease-in-out infinite alternate}
+@keyframes wcp{to{opacity:.4}}
+.cell.clr{animation:clr .38s ease-in forwards}
+@keyframes clr{40%{transform:scale(1.2);filter:brightness(1.8)}100%{transform:scale(0);opacity:0}}
+.cell.dead{filter:grayscale(1) brightness(.7);transition:filter .3s}
+.spark{position:absolute;width:10px;height:10px;border-radius:3px;pointer-events:none;z-index:30;animation:spark .7s ease-out forwards}
+@keyframes spark{to{transform:translate(var(--dx),var(--dy)) rotate(260deg) scale(.2);opacity:0}}
+.pop{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);pointer-events:none;z-index:31;text-align:center;font-weight:700;color:#fff;
+  -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 5px 0 var(--ink);white-space:nowrap;animation:popt 1.1s ease-out forwards}
+.pop .t{font-size:clamp(30px,9vmin,64px);color:#FFD23F}
+.pop .p{font-size:clamp(22px,6vmin,40px)}
+@keyframes popt{0%{transform:translate(-50%,-50%) scale(.3)}20%{transform:translate(-50%,-50%) scale(1.15)}30%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-50%,-110%);opacity:0}}
+
+.tray{grid-area:tray;width:var(--bs-tray,min(94vw,620px));display:flex;justify-content:space-around;align-items:center;min-height:calc(min(94vw,620px) * .3)}
+.slot{flex:1;display:grid;place-items:center;height:100%;min-height:90px;touch-action:none}
+.piece{display:grid;gap:3px;transition:transform .15s}
+.piece .blk{border-radius:16%}
+.piece .e{visibility:hidden}
+.piece.nofit{opacity:.35;filter:grayscale(.7)}
+.slot.used .piece{visibility:hidden}
+.drag{position:fixed;left:0;top:0;display:grid;pointer-events:none;z-index:40;filter:drop-shadow(0 10px 10px #0006)}
+.drag .blk{border-radius:16%}
+.drag .e{visibility:hidden}
+.gbtns{display:flex;gap:10px;justify-content:center;padding-bottom:4px}
+
+@media (min-aspect-ratio:5/4){
+  .arena{grid-template-columns:auto auto auto;grid-template-areas:"cheer board tray";grid-template-rows:1fr;align-items:center;justify-content:center;gap:24px}
+  .board{--bs:min(calc(100dvh - 200px),calc(100vw - 460px),720px)}
+  .tray{flex-direction:column;width:auto;height:var(--bs);min-height:0;min-width:150px}
+  .cheer{flex-direction:column;max-width:170px;text-align:center}
+  .bubble{left:50%;top:calc(100% + 8px);transform:translate(-50%,0) scale(0);transform-origin:top center}
+  .bubble::before{left:50%;top:-8px;margin:0 0 0 -8px;border:8px solid transparent;border-top:0;border-bottom-color:#fff}
+  .bubble.show{transform:translate(-50%,0) scale(1)}
+}
+@media (min-aspect-ratio:5/4) and (max-height:560px){
+  #game{padding-top:6px;padding-bottom:6px}
+  .gtop{position:absolute;top:6px;left:var(--safe-l);right:var(--safe-r);width:auto;z-index:4;pointer-events:none}
+  .gtop>*{pointer-events:auto}
+  .scorebox{position:fixed;left:var(--safe-l);top:70px;align-items:flex-start}
+  .board{--bs:min(calc(100dvh - 24px),calc(100vw - 440px))}
+  .gbtns{position:absolute;right:var(--safe-r);bottom:8px;flex-direction:column;z-index:4}
+  .gbtns .btn{font-size:14px;padding:8px 12px}
+}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div class="bestbox" id="menuBest"></div>
+  <div class="me" id="me"></div>
+  <div class="menu">
+    <button class="btn green" id="play">▶️ Spela</button>
+    <button class="btn purple" id="pickChar">🎭 Byt figur</button>
+    <button class="btn white" id="toHub">🏠 Alla spel</button>
+  </div>
+</section>
+
+<section id="select" class="screen">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button></div>
+  <h2>Vem hejar på dig?</h2>
+  <p class="hint-txt">Din figur jublar när du rensar rader</p>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="game" class="screen">
+  <div class="gtop">
+    <button class="ibtn" id="gHome">🏠</button>
+    <div class="scorebox"><div class="score" id="score">0</div><div class="bestline" id="bestLine"></div></div>
+    <button class="ibtn" id="gSound">🔊</button>
+  </div>
+  <div class="arena">
+    <div class="cheer" id="cheer"></div>
+    <div class="board" id="board"></div>
+    <div class="tray" id="tray"><div class="slot" data-s="0"></div><div class="slot" data-s="1"></div><div class="slot" data-s="2"></div></div>
+  </div>
+  <div class="gbtns"><button class="btn blue small" id="reroll">🔄 Nya bitar <span id="rerollN">1</span></button></div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="block/app.js"></script>
+</body>
+</html>

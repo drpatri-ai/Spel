@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Tornet</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#8B7BFF">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(170deg,#FFC9A8 0%,#FFB3D9 40%,#9FD8FF 100%)}
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:10px 16px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:64px}
+.me b{font-size:20px}
+.me small{display:block;color:var(--muted)}
+.bestbox{font-weight:700;font-size:clamp(17px,4.4vmin,22px);text-align:center;text-shadow:0 2px 0 #fff8}
+.char.chosen{box-shadow:0 6px 0 var(--d),0 0 0 5px var(--c)}
+
+#game{padding:0;gap:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:flex-start;gap:10px;pointer-events:none;z-index:3}
+.hud>*{pointer-events:auto}
+.hud .mid{flex:1;display:flex;flex-direction:column;align-items:center;pointer-events:none}
+.floors{font-size:clamp(40px,11vmin,80px);font-weight:700;color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 5px 0 var(--ink);line-height:1}
+.floors small{display:block;font-size:.3em;-webkit-text-stroke:2px var(--ink);text-shadow:0 2px 0 var(--ink);margin-top:2px}
+.subhud{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap;justify-content:center}
+.chip{background:var(--card);border-radius:14px;padding:4px 10px;font-weight:600;font-size:clamp(13px,3.2vmin,17px);box-shadow:0 3px 0 #C9C3E8;white-space:nowrap}
+.hearts{font-size:clamp(20px,5vmin,28px);letter-spacing:2px}
+.tapHint{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 6%);text-align:center;font-weight:700;font-size:clamp(20px,5.5vmin,32px);color:#fff;
+  -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 4px 0 var(--ink);pointer-events:none;z-index:3;animation:bob 1.4s ease-in-out infinite}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div class="bestbox" id="menuBest"></div>
+  <div class="me" id="me"></div>
+  <div class="menu">
+    <button class="btn" id="play">▶️ Bygg!</button>
+    <button class="btn purple" id="pickChar">🎭 Byt kranförare</button>
+    <button class="btn white" id="toHub">🏠 Alla spel</button>
+  </div>
+</section>
+
+<section id="select" class="screen">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button></div>
+  <h2>Vem kör kranen?</h2>
+  <p class="hint-txt">Kranföraren hejar och firar ditt rekord</p>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <button class="ibtn" id="gHome">🏠</button>
+    <div class="mid">
+      <div class="floors" id="hFloors">0</div>
+      <div class="subhud"><span class="chip" id="hPeople">👥 0</span><span class="chip" id="hCombo">⭐ 0</span></div>
+    </div>
+    <div class="chip hearts" id="hLives">❤️❤️❤️</div>
+  </div>
+  <div class="tapHint" id="tapHint">Tryck för att släppa våningen! 👆</div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="torn/app.js"></script>
+</body>
+</html>

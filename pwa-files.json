@@ -1,5 +1,5 @@
 {
- "version": "a7997dfd73af",
+ "version": "d5e5188b19a3",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -28,9 +28,15 @@
   "hill/cars/focus.webp",
   "hill/cars/focus_hjul.webp",
   "hill/cars/focus_lack.webp",
+  "hill/cars/freelander.webp",
+  "hill/cars/freelander_hjul.webp",
+  "hill/cars/freelander_lack.webp",
   "hill/cars/getz.webp",
   "hill/cars/getz_hjul.webp",
   "hill/cars/getz_lack.webp",
+  "hill/cars/p206.webp",
+  "hill/cars/p206_hjul.webp",
+  "hill/cars/p206_lack.webp",
   "hill/cars/s10.webp",
   "hill/cars/s10_hjul.webp",
   "hill/cars/s10_lack.webp",

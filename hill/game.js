@@ -330,7 +330,10 @@
         else { c.fuel = c.fuelMax; this.say(it.x, it.y + 1, c.def.electric ? 'Laddat! ⚡' : 'Fulltankat! ⛽', '#34C759'); this.hooks.sfx('fuel'); }
       }
     }
-    // slut på bränsle och står still → slut
+    // slut på bränsle: rundan tar slut när bilen står still eller börjar rulla bakåt
+    const back = c.vx < -0.3 && this.car.wheels.every(w => w.om > -0.3);   // rör sig bakåt (inte bara en studs)
+    if (c.fuel <= 0 && back) this.backT = (this.backT || 0) + dt; else this.backT = 0;
+    if (this.backT > 0.35) { this.end('fuel'); return; }
     const sp = Math.hypot(c.vx, c.vy);
     if (c.fuel <= 0 && sp < 0.6) this.stillT += dt; else this.stillT = 0;
     if (this.stillT > 1.6) { this.end('fuel'); return; }

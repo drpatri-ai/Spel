@@ -12,8 +12,6 @@ const CARS = [
     desc: 'Lätt och snål – räcker långt på en tank.' },
   { id: 'focus', name: 'Ford Focus ST', price: 1800, len: 4.36, mass: 1100, torque: 4600, vmax: 34, grip: 1.05, freq: 2.0, damp: 0.42, comH: 0.45, air: 1.25, fuel: 18, drive: 'front',
     desc: 'Het hatch – snabb men lätt att stegra.' },
-  { id: 'xc60', name: 'Volvo XC60', price: 3000, len: 4.69, mass: 1500, torque: 5600, vmax: 28, grip: 1.2, freq: 1.5, damp: 0.5, comH: 0.5, air: 0.9, fuel: 22, drive: 'awd',
-    desc: 'Fyrhjulsdriven SUV med mjuk fjädring.' },
   { id: 'e91', name: 'BMW E91 Touring', price: 4500, len: 4.53, mass: 1450, torque: 6000, vmax: 31, grip: 1.2, freq: 1.8, damp: 0.48, comH: 0.46, air: 1.0, fuel: 21, drive: 'awd',
     desc: 'xDrive och takräcke – klättrar som en get.' },
   { id: 'cab', name: 'BMW Cabriolet', price: 6000, len: 4.6, mass: 1350, torque: 6200, vmax: 40, grip: 1.1, freq: 2.1, damp: 0.42, comH: 0.36, air: 1.2, fuel: 18, drive: 'rear',
@@ -93,13 +91,77 @@ function engineStop() {
 /* ---------- bilder ---------- */
 const imgCache = {};
 function img(src) { if (!imgCache[src]) { const i = new Image(); i.src = src; imgCache[src] = i; } return imgCache[src]; }
-function carPicHTML(id, locked) {
+const loaded = im => new Promise(res => { if (im.complete && im.naturalWidth) res(im); else { im.addEventListener('load', () => res(im), { once: true }); im.addEventListener('error', () => res(null), { once: true }); } });
+
+/* ---------- lackfärger ----------
+   Varje bil har ett lacklager (cars/<id>_lack.webp: gråskala-skuggning + mask för lacken).
+   Ny färg = vald färg + (ljus − bilens medelljus) × kontrast → reflexer och skuggor följer med. */
+const PAINTS = [
+  { id: 'orig', name: 'Original', c: null },
+  { id: 'rod', name: 'Röd', c: '#D62828' }, { id: 'orange', name: 'Orange', c: '#FF7A1A' }, { id: 'gul', name: 'Gul', c: '#FFC928' },
+  { id: 'lime', name: 'Limegrön', c: '#8BD12A' }, { id: 'gron', name: 'Grön', c: '#2E9E4F' }, { id: 'turkos', name: 'Turkos', c: '#18B6B0' },
+  { id: 'ljusbla', name: 'Ljusblå', c: '#4FB3FF' }, { id: 'bla', name: 'Blå', c: '#1F5BD6' }, { id: 'lila', name: 'Lila', c: '#7D4CDB' },
+  { id: 'rosa', name: 'Rosa', c: '#FF6FB0' }, { id: 'brun', name: 'Brun', c: '#7A4A26' }, { id: 'guld', name: 'Guld', c: '#D4AF37' },
+  { id: 'vit', name: 'Vit', c: '#F2F2F2' }, { id: 'silver', name: 'Silver', c: '#B8BEC8' }, { id: 'grafit', name: 'Grafit', c: '#4A4F58' },
+  { id: 'svart', name: 'Svart', c: '#1A1A1F' }
+];
+const colorOf = id => { const c = store.get('colors', {})[id]; return PAINTS.some(p => p.id === c) ? c : 'orig'; };
+const paintCache = {};          // 'bil:färg' → { canvas, url }
+function paintedCar(id, colorId) {
+  const key = id + ':' + colorId;
+  if (paintCache[key]) return paintCache[key].p;
+  const P = PAINTS.find(x => x.id === colorId);
+  const p = (async () => {
+    const [body, lack] = await Promise.all([loaded(img(`hill/cars/${id}.webp`)), loaded(img(`hill/cars/${id}_lack.webp`))]);
+    if (!body || !lack || !P || !P.c) return null;
+    const W = body.naturalWidth, H = body.naturalHeight;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const x = cv.getContext('2d');
+    x.drawImage(lack, 0, 0, W, H);
+    let d;
+    try { d = x.getImageData(0, 0, W, H); } catch (e) { return null; }
+    const a = d.data, { Lmean, gain } = CAR_META[id].paint;
+    const r0 = parseInt(P.c.slice(1, 3), 16) / 255, g0 = parseInt(P.c.slice(3, 5), 16) / 255, b0 = parseInt(P.c.slice(5, 7), 16) / 255;
+    for (let i = 0; i < a.length; i += 4) {
+      if (!a[i + 3]) continue;
+      const v = (a[i] / 255 - Lmean) * gain;
+      a[i] = Math.max(0, Math.min(255, (r0 + v) * 255));
+      a[i + 1] = Math.max(0, Math.min(255, (g0 + v) * 255));
+      a[i + 2] = Math.max(0, Math.min(255, (b0 + v) * 255));
+    }
+    const layer = document.createElement('canvas'); layer.width = W; layer.height = H;
+    layer.getContext('2d').putImageData(d, 0, 0);
+    x.clearRect(0, 0, W, H);
+    x.drawImage(body, 0, 0);
+    x.drawImage(layer, 0, 0);
+    let url = null;
+    try { url = cv.toDataURL('image/png'); } catch (e) { }
+    paintCache[key].canvas = cv; paintCache[key].url = url;
+    return cv;
+  })();
+  paintCache[key] = { p };
+  return p;
+}
+// byt ut bilbilder i menyer/garage när den lackade versionen är klar
+function bodySrc(id, colorId) {
+  colorId = colorId || colorOf(id);
+  if (colorId === 'orig') return `hill/cars/${id}.webp`;
+  const k = paintCache[id + ':' + colorId];
+  if (k && k.url) return k.url;
+  paintedCar(id, colorId).then(() => {
+    const u = paintCache[id + ':' + colorId].url;
+    if (u) document.querySelectorAll(`img.body[data-car="${id}"][data-paint="${colorId}"]`).forEach(el => { el.src = u; });
+  });
+  return `hill/cars/${id}.webp`;
+}
+function carPicHTML(id, locked, colorId) {
+  colorId = colorId || colorOf(id);
   const M = CAR_META[id], C = carDef(id);
   const pct = (v, of) => (v / of * 100).toFixed(2) + '%';
   const wh = k => { const [x, y] = M[k], s = M.wheelSize; return `<img class="wh" src="hill/cars/${id}_hjul.webp" style="left:${pct(x - s / 2, M.w)};top:${pct(y - s / 2, M.h)};width:${pct(s, M.w)};height:${pct(s, M.h)}" alt="">`; };
   const [hx, hy, hr] = M.head, r = hr * 1.25;
   return `<div class="carpic ${locked ? 'locked' : ''}" style="--ar:${M.w}/${M.h}">
-    <img class="body" src="hill/cars/${id}.webp" alt="">${wh('rear')}${wh('front')}
+    <img class="body" src="${bodySrc(id, colorId)}" data-car="${id}" data-paint="${colorId}" alt="">${wh('rear')}${wh('front')}
     <img class="face" src="${avatarSrc(driver)}" style="left:${pct(hx - r, M.w)};top:${pct(hy - r, M.h)};width:${pct(2 * r, M.w)};height:${pct(2 * r, M.h)};opacity:${C.tinted ? .85 : 1}" alt=""></div>`;
 }
 
@@ -141,6 +203,13 @@ function buildGarage() {
     </div>
     ${stat('💪', 'Kraft', tq / 2.6)}${stat('💨', 'Fart', vm / 44)}${stat('🛞', 'Grepp', gr / 1.9)}${stat(C.electric ? '🔋' : '⛽', C.electric ? 'Batteri' : 'Tank', fu / 55)}
   </div>`;
+  if (own) {
+    const cur = colorOf(viewCar);
+    html += `<div class="row" style="flex-direction:column;align-items:stretch;gap:8px"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:30px">🎨</span>
+      <div class="grow"><h4 style="margin:0">Lackfärg</h4><p class="small-note">Gratis – välj hur ${esc(C.name)} ska se ut</p></div><b style="color:var(--muted)">${PAINTS.find(p => p.id === cur).name}</b></div>
+      <div class="paints">${PAINTS.map(p => `<button class="pnt ${p.id === cur ? 'on' : ''}" data-paint="${p.id}" title="${p.name}" aria-label="${p.name}"
+        style="${p.c ? `background:${p.c}` : `background:url(hill/cars/${viewCar}.webp) 18% 45%/260% auto no-repeat,#eee`}">${p.c ? '' : '<span>Orig.</span>'}</button>`).join('')}</div></div>`;
+  }
   if (own) html += UPS.map(up => {
     const lv = u[up.k], cost = lv < MAXLV ? upCost(C, lv) : 0;
     const nm = up.k === 'fuel' && C.electric ? 'Batteri' : up.name, ic = up.k === 'fuel' && C.electric ? '🔋' : up.icon;
@@ -154,6 +223,10 @@ function buildGarage() {
     return `<button class="gcar ${c.id === viewCar ? 'sel' : ''}" data-car="${c.id}">${c.id === carId ? '<span class="tag">Vald</span>' : ''}
       ${carPicHTML(c.id, !o)}<b>${esc(c.name)}</b>${o ? `<small>Nivå ${Object.values(ups(c.id)).reduce((a, b) => a + b, 0)}/40</small>` : `<span class="price">🪙 ${c.price}</span>`}</button>`;
   }).join('');
+  $('detail').querySelectorAll('.pnt').forEach(b => b.onclick = () => {
+    const all = store.get('colors', {}); all[viewCar] = b.dataset.paint; store.set('colors', all);
+    SFX.pick(); buzz(12); buildGarage();
+  });
   $('cars').querySelectorAll('[data-car]').forEach(b => b.onclick = () => { SFX.tap(); viewCar = b.dataset.car; buildGarage(); $('garage').scrollTo({ top: 0, behavior: 'smooth' }); });
   if ($('pickCar')) $('pickCar').onclick = () => { carId = viewCar; store.set('car', carId); SFX.pick(); buzz(15); buildGarage(); };
   if ($('buyCar')) $('buyCar').onclick = () => {
@@ -199,14 +272,16 @@ function buildDriver() {
 /* ---------- själva körningen ---------- */
 let world = null, rend = null, raf = 0, last = 0, paused = false, acc = 0;
 const STEP = 1 / 60;
-function startRun() {
+async function startRun() {
   const C = carDef(carId);
   const hooks = { sfx: (n, a) => SFX[n] && SFX[n](a), end: onEnd };
   world = new Hill.World({ stage: stageId, carDef: C, ups: ups(carId), best: bestOf(stageId) }, hooks);
   show('game');
   if (!rend) rend = new Hill.Renderer($('cv'), {});
   rend.resize(); rend._init = false;
-  rend.imgs = { body: img(`hill/cars/${carId}.webp`), wheel: img(`hill/cars/${carId}_hjul.webp`), face: img(avatarSrc(driver)) };
+  const col = colorOf(carId);
+  const body = col === 'orig' ? img(`hill/cars/${carId}.webp`) : (await paintedCar(carId, col)) || img(`hill/cars/${carId}.webp`);
+  rend.imgs = { body, wheel: img(`hill/cars/${carId}_hjul.webp`), face: img(avatarSrc(driver)) };
   $('hFuelIcon').textContent = C.electric ? '🔋' : '⛽';
   $('hBest').textContent = bestOf(stageId) ? `🏁 ${bestOf(stageId)} m` : '🏁 –';
   $('startHint').classList.remove('hidden');
@@ -321,7 +396,20 @@ window.onBack = function () {
   show('menu'); return true;
 };
 
+// XC60 är borttagen – ge tillbaka det man lagt på den
+(function migrateXC60() {
+  const own = owned();
+  if (own.includes('xc60') && !store.get('xc60refund', false)) {
+    const u = Object.assign({ engine: 0, susp: 0, tires: 0, fuel: 0 }, (store.get('ups', {}).xc60 || {}));
+    let back = 3000;
+    for (const k in u) for (let lv = 0; lv < u[k]; lv++) back += Math.round(UP_COST[lv] * (1 + 3000 / 9000) / 10) * 10;
+    addCoins(back);
+    store.set('owned', own.filter(x => x !== 'xc60'));
+    store.set('xc60refund', true);
+  }
+  if (!CARS.some(c => c.id === carId)) { carId = 's80'; store.set('car', carId); }
+})();
 // förladda bilderna
-CARS.forEach(c => { img(`hill/cars/${c.id}.webp`); img(`hill/cars/${c.id}_hjul.webp`); });
+CARS.forEach(c => { img(`hill/cars/${c.id}.webp`); img(`hill/cars/${c.id}_hjul.webp`); if (colorOf(c.id) !== 'orig') paintedCar(c.id, colorOf(c.id)); });
 bubbles();
 show('menu');

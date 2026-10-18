@@ -537,7 +537,7 @@
     // kaross
     ctx.save();
     ctx.translate(SX(c.x), SY(c.y)); ctx.rotate(-c.a);
-    if (body && body.complete && body.naturalWidth) ctx.drawImage(body, -c.comPx.x * k, -c.comPx.y * k, M.w * k, M.h * k);
+    if (body && (body.tagName === 'CANVAS' ? body.width > 0 : body.complete && body.naturalWidth > 0)) ctx.drawImage(body, -c.comPx.x * k, -c.comPx.y * k, M.w * k, M.h * k);
     // föraren: vald figurs ansikte i rutan
     if (face && face.complete && face.naturalWidth) {
       const [hx, hy, hr] = M.head;

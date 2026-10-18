@@ -1,6 +1,6 @@
 # Bucinca Spel
 
-Webbversionen av Bucinca Spel – 4 i rad, Schack, Paf!, Block och Tornet med Leah, Leon, Patriot och Hanna.
+Webbversionen av Bucinca Spel – 4 i rad, Schack, Paf!, Block, Tornet och Backracet med Leah, Leon, Patriot och Hanna.
 
 Spela: **https://drpatri-ai.github.io/Spel/**
 

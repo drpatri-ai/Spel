@@ -1,7 +1,7 @@
 {
   "name": "Bucinca Spel",
   "short_name": "Bucinca",
-  "description": "4 i rad, Schack, Paf!, Block och Tornet med Leah, Leon, Patriot och Hanna",
+  "description": "4 i rad, Schack, Paf!, Block, Tornet och Backracet med Leah, Leon, Patriot och Hanna",
   "lang": "sv",
   "start_url": "./index.html",
   "scope": "./",
@@ -19,6 +19,7 @@
     { "name": "Schack", "url": "./schack.html" },
     { "name": "Paf!", "url": "./paf.html" },
     { "name": "Block", "url": "./block.html" },
-    { "name": "Tornet", "url": "./torn.html" }
+    { "name": "Tornet", "url": "./torn.html" },
+    { "name": "Backracet", "url": "./hill.html" }
   ]
 }

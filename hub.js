@@ -9,10 +9,12 @@ const GAMES = [
     stat: () => { const s = makeStore('bs').get('stats', null); if (!s) return ''; const b = s.bot || {}; const w = ['easy', 'medium', 'hard'].reduce((n, l) => n + ((b[l] || {}).w || 0), 0); return w ? `🏆 ${w} vinster mot datorn` : ''; } },
   { id: 'paf', title: 'Paf!', sub: 'Sparka iväg figuren så långt det går', icon: '🦵', c: '#FF8A3D', d: '#D9621A',
     stat: () => { const r = makeStore('bp').get('rec', {}); const best = Math.max(0, ...Object.values(r).map(e => e.best || 0)); return best ? `🏁 Rekord ${best} m` : ''; } },
-  { id: 'block', title: 'Block', sub: 'Lägg bitarna och rensa rader', icon: '🧱', c: '#34C759', d: '#219A40', isNew: true,
+  { id: 'block', title: 'Block', sub: 'Lägg bitarna och rensa rader', icon: '🧱', c: '#34C759', d: '#219A40',
     stat: () => { const b = makeStore('bb').get('best', 0); return b ? `⭐ Rekord ${b} poäng` : ''; } },
-  { id: 'torn', title: 'Tornet', sub: 'Bygg våning för våning – innan det rasar!', icon: '🏢', c: '#FF6FAE', d: '#D94788', isNew: true,
-    stat: () => { const b = makeStore('bt').get('best', 0); return b ? `🏢 Rekord ${b} våningar` : ''; } }
+  { id: 'torn', title: 'Tornet', sub: 'Bygg våning för våning – innan det rasar!', icon: '🏢', c: '#FF6FAE', d: '#D94788',
+    stat: () => { const b = makeStore('bt').get('best', 0); return b ? `🏢 Rekord ${b} våningar` : ''; } },
+  { id: 'hill', title: 'Backracet', sub: 'Kör uppför backarna – akta huvudet!', icon: '🚗', c: '#3B9DFF', d: '#2373C9', isNew: true,
+    stat: () => { const b = makeStore('bh').get('best', {}); const m = Math.max(0, ...Object.values(b)); return m ? `🏁 Rekord ${m} m` : ''; } }
 ];
 
 let current = 'hub';

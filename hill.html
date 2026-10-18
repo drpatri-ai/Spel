@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Backracet</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#8B7BFF">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(170deg,#5EC2FF 0%,#BDEBFF 55%,#8FD46B 100%)}
+.hidden{display:none!important}
+.coinbar{position:absolute;top:var(--safe-t);right:var(--safe-r);background:#FFD23F;border-radius:16px;padding:8px 14px;font-weight:700;font-size:clamp(16px,4vmin,22px);box-shadow:0 4px 0 #C99600;z-index:6}
+
+/* bil med hjul och förare i HTML */
+.carpic{position:relative;width:100%;aspect-ratio:var(--ar);}
+.carpic img{position:absolute;display:block}
+.carpic .body{left:0;top:0;width:100%;height:100%}
+.carpic .face{border-radius:50%;object-fit:cover;border:2px solid #fff;box-sizing:border-box}
+.carpic.locked .body,.carpic.locked .wh{filter:brightness(0) opacity(.35)}
+.carpic.locked .face{display:none}
+
+/* meny */
+#menu{gap:12px}
+.showcase{width:min(86vw,460px);background:var(--card);border-radius:26px;padding:12px 16px 14px;box-shadow:0 6px 0 #C9C3E8;display:flex;flex-direction:column;align-items:center;gap:6px}
+.showcase .carpic{animation:idle 1.2s ease-in-out infinite}
+@keyframes idle{50%{transform:translateY(-3px) rotate(-1deg)}}
+.showcase b{font-size:clamp(18px,4.6vmin,24px)}
+.showcase small{color:var(--muted);font-size:clamp(13px,3.3vmin,16px);text-align:center}
+.menu .row2{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+.menu .row2 .btn{min-width:0;flex:1}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #menu{flex-direction:row;gap:24px}
+  #menu .logo .l1{font-size:42px}#menu .logo .l2{font-size:36px}
+  .showcase{width:min(42vw,380px)}
+}
+
+/* garage */
+.garage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(94vw,640px)}
+@media (min-aspect-ratio:5/4){.garage{grid-template-columns:repeat(4,minmax(0,1fr));width:min(96vw,1100px)}}
+.gcar{background:var(--card);border-radius:20px;padding:10px 10px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;box-shadow:0 5px 0 #C9C3E8;position:relative}
+.gcar b{font-size:clamp(14px,3.6vmin,18px)}
+.gcar small{font-size:12px;color:var(--muted);text-align:center}
+.gcar.sel{box-shadow:0 5px 0 #219A40,0 0 0 4px #34C759}
+.gcar .price{background:#FFD23F;border-radius:10px;padding:2px 10px;font-weight:700;font-size:14px}
+.gcar .tag{position:absolute;top:8px;left:8px;font-size:11px;font-weight:700;background:var(--ink);color:#fff;border-radius:8px;padding:2px 7px}
+.detail{width:min(94vw,640px);display:flex;flex-direction:column;gap:10px}
+.stat{display:grid;grid-template-columns:30px 90px 1fr;align-items:center;gap:8px;font-size:15px}
+.stat .bar{height:10px;background:#E4E0F7;border-radius:6px;overflow:hidden}
+.stat .bar i{display:block;height:100%;background:linear-gradient(90deg,#34C759,#FFD23F)}
+.uprow .lv{display:flex;gap:3px;margin-top:5px}
+.uprow .lv i{flex:1;height:8px;border-radius:4px;background:#E4E0F7}
+.uprow .lv i.on{background:#34C759}
+
+/* banor */
+.stages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:min(94vw,640px)}
+@media (min-aspect-ratio:5/4){.stages{grid-template-columns:repeat(4,minmax(0,1fr));width:min(96vw,1100px)}}
+.stg{border-radius:20px;overflow:hidden;box-shadow:0 5px 0 #C9C3E8;background:var(--card);display:flex;flex-direction:column;position:relative}
+.stg .pic{height:90px;position:relative}
+.stg .info{padding:8px 10px 10px;display:flex;flex-direction:column;gap:2px;align-items:center}
+.stg b{font-size:18px}
+.stg small{color:var(--muted);font-size:13px;text-align:center}
+.stg.sel{box-shadow:0 5px 0 #219A40,0 0 0 4px #34C759}
+.stg.locked .pic{filter:grayscale(.8) brightness(.8)}
+
+/* spelet */
+#game{padding:0;gap:0}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:flex-start;gap:8px;pointer-events:none;z-index:3}
+.hud>*{pointer-events:auto}
+.hud .col{display:flex;flex-direction:column;gap:6px}
+.chip{background:#ffffffe6;border-radius:14px;padding:5px 12px;font-weight:700;font-size:clamp(14px,3.6vmin,19px);box-shadow:0 3px 0 #0002;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.fuel{width:clamp(110px,30vmin,200px);height:14px;border-radius:8px;background:#0002;overflow:hidden;border:2px solid #2B2350}
+.fuel i{display:block;height:100%;background:linear-gradient(90deg,#FF4D6D,#FFD23F 40%,#34C759);transform-origin:left;transition:transform .2s}
+.fuel.low{animation:blink .5s steps(2) infinite}
+@keyframes blink{50%{opacity:.35}}
+.hud .sp{flex:1}
+.pedal{position:absolute;bottom:calc(var(--safe-b) + 4px);width:clamp(96px,26vmin,150px);height:clamp(120px,32vmin,190px);border-radius:24px;z-index:4;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-weight:700;color:#fff;font-size:clamp(15px,3.8vmin,20px);
+  box-shadow:0 8px 0 #0004;touch-action:none;user-select:none;transition:transform .05s,box-shadow .05s;-webkit-user-select:none}
+.pedal span{font-size:clamp(36px,10vmin,56px);line-height:1}
+.pedal.down{transform:translateY(6px) scale(.97);box-shadow:0 2px 0 #0004}
+#pBrake{left:var(--safe-l);background:linear-gradient(#FF6B6B,#D93838)}
+#pGas{right:var(--safe-r);background:linear-gradient(#5BE07A,#219A40)}
+.startHint{position:absolute;left:0;right:0;top:32%;text-align:center;font-weight:700;font-size:clamp(20px,5.5vmin,32px);color:#fff;
+  -webkit-text-stroke:3px var(--ink);paint-order:stroke fill;text-shadow:0 4px 0 var(--ink);pointer-events:none;z-index:3;animation:bob 1.4s ease-in-out infinite}
+.res{width:100%;display:flex;flex-direction:column;gap:8px}
+.res .r{display:flex;justify-content:space-between;align-items:center;background:#F4F1FF;border-radius:14px;padding:8px 14px;font-size:17px}
+.res .r b{font-size:19px}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+    <div class="showcase" id="showcase"></div>
+    <div class="menu">
+      <button class="btn green" id="play">🚗 Kör!</button>
+      <div class="row2">
+        <button class="btn blue small" id="toGarage">🔧 Garage</button>
+        <button class="btn purple small" id="toStages">🗺️ Banor</button>
+        <button class="btn pink small" id="toDriver">🎭 Förare</button>
+      </div>
+      <button class="btn white small" id="toHub">🏠 Alla spel</button>
+    </div>
+  </div>
+  <div class="coinbar" id="menuCoins">🪙 0</div>
+</section>
+
+<section id="garage" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Garage 🔧</h2><span style="width:48px"></span></div>
+  <div class="coinbar" id="garCoins">🪙 0</div>
+  <div class="list" style="width:auto;align-items:center">
+    <div class="detail" id="detail"></div>
+    <div class="garage" id="cars"></div>
+  </div>
+</section>
+
+<section id="stages" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Banor 🗺️</h2><span style="width:48px"></span></div>
+  <div class="coinbar" id="stgCoins">🪙 0</div>
+  <div class="list" style="width:auto;align-items:center"><div class="stages" id="stageList"></div></div>
+</section>
+
+<section id="driver" class="screen">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button></div>
+  <h2>Vem kör?</h2>
+  <p class="hint-txt">Förarens ansikte syns i bilrutan</p>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <button class="ibtn" id="gPause">⏸️</button>
+    <div class="col">
+      <div class="chip">📏 <span id="hDist">0 m</span></div>
+      <div class="chip" style="padding:5px 10px"><span id="hFuelIcon">⛽</span><div class="fuel" id="hFuel"><i id="hFuelBar"></i></div></div>
+    </div>
+    <div class="sp"></div>
+    <div class="col" style="align-items:flex-end">
+      <div class="chip">🪙 <span id="hCoins">0</span></div>
+      <div class="chip" id="hBest" style="font-size:13px">🏁 –</div>
+    </div>
+  </div>
+  <div class="startHint" id="startHint">Håll in GAS för att köra! 👉</div>
+  <div class="pedal" id="pBrake"><span>🛑</span>BROMS</div>
+  <div class="pedal" id="pGas"><span>🚀</span>GAS</div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="hill/cars.js"></script>
+<script src="hill/game.js"></script>
+<script src="hill/app.js"></script>
+</body>
+</html>

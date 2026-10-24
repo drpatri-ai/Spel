@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Studs</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#1B2A6B">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(170deg,#4FC3FF 0%,#6C63FF 45%,#2B1F6B 100%)}
+.hidden{display:none!important}
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:8px 14px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:58px}
+.me b{font-size:19px}
+.me small{display:block;color:var(--muted)}
+.pw{display:inline-flex;align-items:center;gap:4px;background:#2B2350;color:#FFD23F;border-radius:10px;padding:2px 9px;font-weight:700;font-size:14px;white-space:nowrap}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #menu{flex-direction:row;gap:26px}
+  #menu .logo .l1{font-size:42px}#menu .logo .l2{font-size:34px}
+  #menu .menu .btn{padding:9px 18px}
+}
+#menu .menu{gap:10px}
+.row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.row2 .btn{min-width:0;flex:1}
+.char .pw{font-size:12px;padding:1px 7px}
+
+.wrap{width:min(96vw,1000px);display:flex;flex-direction:column;gap:12px;margin-top:64px;padding-bottom:20px}
+.card{background:var(--card);border-radius:22px;padding:12px 14px;box-shadow:0 5px 0 #C9C3E8;display:flex;flex-direction:column;gap:8px}
+.card h4{margin:0;font-size:18px}
+.note{color:var(--muted);font-size:15px;margin:0;line-height:1.35}
+
+/* banor */
+.lvls{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(46%,190px),1fr));gap:10px}
+.lv{background:var(--card);border-radius:20px;padding:10px 8px;box-shadow:0 5px 0 #C9C3E8;display:flex;flex-direction:column;align-items:center;gap:2px;position:relative}
+.lv .ic{font-size:38px;line-height:1.1}
+.lv b{font-size:16px}
+.lv small{color:var(--muted);font-size:13px}
+.lv.done{box-shadow:0 5px 0 #219A40,0 0 0 3px #34C759}
+.lv.lock{opacity:.5;filter:grayscale(.8)}
+.lv .no{position:absolute;top:6px;left:10px;font-weight:700;color:var(--muted);font-size:14px}
+.lv .st{position:absolute;top:4px;right:8px;font-size:18px}
+.lv:active{transform:scale(.97)}
+
+/* flera spelare */
+.sel{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;min-height:62px;align-items:center}
+.sel .av{width:56px}
+.sel .slot{width:56px;height:56px;border-radius:50%;border:3px dashed #fff8;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700}
+.char.taken{opacity:.45}
+.char .num{position:absolute;top:4px;right:6px;background:#FFD23F;border-radius:50%;width:26px;height:26px;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 0 #C99600}
+.char{position:relative}
+
+/* lobby */
+.plist{display:flex;flex-direction:column;gap:8px}
+.pl{display:flex;align-items:center;gap:10px;background:#F6F4FF;border-radius:16px;padding:6px 10px;font-weight:600}
+.pl .av{width:42px;border-width:3px}
+.pl span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl.mine{box-shadow:0 0 0 3px #FFD23F}
+.joininfo{display:flex;gap:12px;align-items:center}
+.qr{background:#fff;border-radius:14px;padding:6px;flex:none;line-height:0}
+.qr svg{width:min(34vw,150px);height:auto}
+.url{font-weight:700;font-size:clamp(17px,4.2vmin,24px);white-space:nowrap}
+.ipbox{display:flex;gap:8px}
+.ipbox input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:600;border:3px solid #E4E0F7;border-radius:14px;padding:8px 12px;color:var(--ink);-webkit-user-select:text;user-select:text}
+.found{display:flex;flex-direction:column;gap:10px}
+.found .btn{min-width:0;width:100%}
+.spin{display:inline-block;animation:spin2 1s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+.gar{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-aspect-ratio:5/4){.gar{grid-template-columns:1.15fr 1fr;align-items:start}}
+.lvpick{display:flex;align-items:center;gap:8px;justify-content:space-between;background:#F6F4FF;border-radius:16px;padding:6px}
+.lvpick b{font-size:18px;text-align:center;flex:1}
+.lvpick .ibtn{width:44px;height:44px}
+
+/* spelet */
+#game{padding:0;gap:0;background:#141A3D;justify-content:flex-start}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:center;gap:8px;z-index:3;pointer-events:none}
+.hud .ibtn{pointer-events:auto;flex:none}
+.plrs{flex:1;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.plrs::-webkit-scrollbar{display:none}
+.pc{display:flex;align-items:center;gap:6px;background:#ffffffdd;border-radius:16px;padding:3px 10px 3px 3px;flex:none;transition:transform .2s;box-shadow:0 3px 0 #0003}
+.pc .av{width:40px;border-width:3px}
+.pc .t{display:flex;flex-direction:column;line-height:1.1}
+.pc b{font-size:15px;white-space:nowrap}
+.pc small{font-size:13px;color:#555;white-space:nowrap}
+.pc.on{background:#FFD23F;transform:scale(1.06);box-shadow:0 3px 0 #C99600}
+.pc.out{opacity:.5}
+.ctl{position:absolute;left:var(--safe-l);right:var(--safe-r);bottom:var(--safe-b);display:flex;align-items:center;justify-content:center;gap:10px;z-index:3;pointer-events:none}
+.ctl>*{pointer-events:auto}
+#aL{order:0}#fire{order:1}#aR{order:2}#ff{order:3}
+.ctl .btn{min-width:0;padding:10px 26px}
+.ctl .ibtn{width:54px;height:54px;font-size:22px}
+.info{position:absolute;z-index:3;pointer-events:none;display:flex;flex-direction:column;gap:6px;align-items:flex-end}
+.chip{background:#ffffffdd;border-radius:14px;padding:4px 10px;font-weight:700;font-size:15px;box-shadow:0 3px 0 #0003;white-space:nowrap}
+.chip.mult{background:#FF8A1F;color:#fff}
+.chip.mult.x10{background:linear-gradient(90deg,#FF4D6D,#FFD23F,#34C759,#3B9DFF,#B45CFF)}
+.waitmsg{position:absolute;left:0;right:0;text-align:center;z-index:3;pointer-events:none;color:#fff;font-weight:700;font-size:clamp(16px,4vmin,22px);text-shadow:0 2px 0 #0008}
+/* liggande: spelarna till vänster, knapparna till höger */
+#game.land .hud{flex-direction:column;align-items:flex-start;bottom:var(--safe-b);right:auto;width:var(--lw)}
+#game.land .plrs{flex-direction:column;overflow-y:auto;overflow-x:hidden;width:100%}
+#game.land .pc{width:100%}
+#game.land .ctl{left:auto;width:var(--rw);top:0;flex-direction:column}
+#game.land .ctl .arow{display:flex;gap:10px}
+.ctl .arow{display:contents}
+#game.land .ctl .arow{display:flex}
+.bigtxt{position:absolute;left:0;right:0;top:36%;text-align:center;font-weight:700;color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;
+  text-shadow:0 6px 0 var(--ink);pointer-events:none;z-index:4;font-size:clamp(36px,11vmin,92px);line-height:1.05}
+.bigtxt small{display:block;font-size:.45em;-webkit-text-stroke:3px var(--ink)}
+.bigtxt.pop{animation:pop2 .5s cubic-bezier(.2,1.8,.4,1)}
+@keyframes pop2{from{transform:scale(.2);opacity:0}}
+.rank{display:flex;flex-direction:column;gap:6px;width:100%}
+.rank .r{display:flex;align-items:center;gap:8px;background:#F6F4FF;border-radius:14px;padding:5px 10px;font-weight:600}
+.rank .r .av{width:38px;border-width:3px}
+.rank .r span{flex:1;text-align:left}
+.rank .r.w{background:#FFF3C4;box-shadow:0 0 0 3px #FFD23F}
+.pows{display:grid;grid-template-columns:1fr 1fr;gap:6px;text-align:left;font-size:14px}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+    <button class="me" id="meCard"></button>
+    <div class="menu">
+      <button class="btn green" id="toSolo">🎯 Spela</button>
+      <button class="btn pink small" id="toLocal">👫 Flera spelare (samma skärm)</button>
+      <div class="row2">
+        <button class="btn small hidden" id="toHost">📡 Starta nätverksmatch</button>
+        <button class="btn white small" id="toJoin">🔗 Gå med</button>
+      </div>
+      <div class="row2">
+        <button class="btn white small" id="toHelp">❓ Så spelar man</button>
+        <button class="btn white small" id="toHub">🏠 Alla spel</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="meScr" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="meBack">⬅️</button><span></span></div>
+  <h2 style="margin-top:58px" id="meTitle">Vem spelar?</h2>
+  <p class="hint-txt">Varje figur har en egen superkraft på de gröna pinnarna</p>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="levels" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="lvBack">⬅️</button><h2 id="lvTitle">Välj bana</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="lvBox"></div>
+</section>
+
+<section id="local" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><span></span></div>
+  <h2 style="margin-top:58px">Vilka spelar? 👫</h2>
+  <p class="hint-txt">Tryck på 2–4 figurer i den ordning ni ska skjuta</p>
+  <div class="sel" id="locSel"></div>
+  <div class="chars" id="locChars"></div>
+  <button class="btn green" id="locGo" disabled>Välj bana ➡️</button>
+</section>
+
+<section id="join" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Gå med 🔗</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="joinBox" style="max-width:560px"></div>
+</section>
+
+<section id="lobby" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="lobbyBack">⬅️</button><h2>Studsmatch 🎯</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="lobbyBox"></div>
+</section>
+
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="hud"><button class="ibtn" id="gBack">⬅️</button><div class="plrs" id="plrs"></div></div>
+  <div class="info" id="info"></div>
+  <div class="waitmsg hidden" id="waitmsg"></div>
+  <div class="ctl" id="ctl">
+    <div class="arow"><button class="ibtn" id="aL">◀</button><button class="ibtn" id="aR">▶</button></div>
+    <button class="btn green" id="fire">🎯 Skjut!</button>
+    <button class="ibtn hidden" id="ff">⏩</button>
+  </div>
+  <div class="bigtxt hidden" id="big"></div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="boll/qrcode.js"></script>
+<script src="studs/sim.js"></script>
+<script src="studs/app.js"></script>
+</body>
+</html>

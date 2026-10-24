@@ -152,7 +152,7 @@ function scan() {
   window.onNetScan = list => {
     scanning = false;
     if (current !== 'join' || !$('found')) return;
-    $('found').innerHTML = list.length ? list.map(m => { const k = /^krock:/.test(m.name); return `<button class="btn blue" data-ip="${esc(m.ip)}" data-port="${m.port}" data-page="${k ? 'krock.html' : 'boll.html'}">${k ? '💥 ' + esc(m.name.slice(6)) : '⚽ ' + esc(m.name)}</button>`; }).join('')
+    $('found').innerHTML = list.length ? list.map(m => { const g = netGameOf(m.name); return `<button class="btn blue" data-ip="${esc(m.ip)}" data-port="${m.port}" data-page="${g.page}">${esc(g.label)}</button>`; }).join('')
       : `<p class="note">Hittade ingen match. Be värden trycka 📡 Starta nätverksmatch – och kolla att ni är på samma wifi.</p>`;
     $('found').querySelectorAll('[data-ip]').forEach(b => b.onclick = () => { SFX.tap(); goJoin(b.dataset.ip, +b.dataset.port, b.dataset.page); });
   };

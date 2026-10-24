@@ -19,7 +19,9 @@ const GAMES = [
     stat: () => { const w = makeStore('bf').get('wins', [0, 0, 0]).reduce((a, b) => a + b, 0); return w ? `🏆 ${w} vinster mot datorn` : ''; } },
   { id: 'krock', title: 'Krockarenan', sub: 'Bygg en stridsbil – krocka mot familjen', icon: '💥', c: '#8B5BFF', d: '#6235D9',
     stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('krock') || 'null') : makeStore('bk').get('prof', null); } catch (e) { } return p && p.lad ? `⚔️ ${p.lad} segrar i arenan` : ''; } },
-  { id: 'stad', title: 'Staden', sub: 'Lek med familjen hemma, i parken och i affären', icon: '🏙️', c: '#14C8C8', d: '#0E9A9A', isNew: true, stat: () => '' }
+  { id: 'stad', title: 'Staden', sub: 'Lek med familjen hemma, i parken och i affären', icon: '🏙️', c: '#14C8C8', d: '#0E9A9A', stat: () => '' },
+  { id: 'studs', title: 'Studs', sub: 'Sikta, studsa och träffa alla orange pinnar', icon: '🎯', c: '#FF7A12', d: '#D95A00', isNew: true,
+    stat: () => { const c = Object.keys(makeStore('bu').get('cleared', {})).length; return c ? `⭐ ${c} banor klara` : ''; } }
 ];
 
 let current = 'hub';

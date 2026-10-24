@@ -86,6 +86,13 @@ const CORE_SFX = {
 
 /* ---------- navigering mellan spelen ---------- */
 function goHub() { location.href = 'index.html'; }
+/* nätverksmatcher annonseras med prefix (krock:, studs:) – fotboll utan – så att "Gå med" öppnar rätt spel */
+function netGameOf(name) {
+  name = String(name || '');
+  if (/^krock:/.test(name)) return { page: 'krock.html', label: '💥 ' + name.slice(6) };
+  if (/^studs:/.test(name)) return { page: 'studs.html', label: '🎯 ' + name.slice(6) };
+  return { page: 'boll.html', label: '⚽ ' + name.replace(/^boll:/, '') };
+}
 
 /* ---------- bakgrundsbubblor ---------- */
 function bubbles(el) {

@@ -1,5 +1,5 @@
 {
- "version": "e9222c99daee",
+ "version": "d782bee8582b",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -118,6 +118,9 @@
   "stad.html",
   "stad/app.js",
   "stad/scenes.js",
+  "studs.html",
+  "studs/app.js",
+  "studs/sim.js",
   "torn.html",
   "torn/app.js"
  ]

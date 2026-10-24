@@ -419,7 +419,7 @@ function play(rep, who, opts = {}) {
 
 /* ================= NÄTVERK ================= */
 const G = { mode: 'local' };
-function gameOfMatch(name) { return /^krock:/.test(name) ? { page: 'krock.html', label: '💥 ' + name.slice(6) } : { page: 'boll.html', label: '⚽ ' + name.replace(/^boll:/, '') }; }
+const gameOfMatch = netGameOf;
 let scanning = false;
 function buildJoin() {
   const app = !!window.Android;

@@ -25,7 +25,13 @@ const CHARS = [
   { name: 'Leah', c: '#34C759', d: '#219A40', img: 'avatars/1.jpg', full: 'avatars/full1.webp' },
   { name: 'Leon', c: '#FF8A3D', d: '#D9621A', img: 'avatars/2.jpg', full: 'avatars/full2.webp' },
   { name: 'Patriot', c: '#8B7BFF', d: '#6252D9', img: 'avatars/3.jpg', full: 'avatars/full3.webp' },
-  { name: 'Hanna', c: '#FF6FAE', d: '#D94788', img: 'avatars/4.jpg', full: 'avatars/full4.webp' }
+  { name: 'Hanna', c: '#FF6FAE', d: '#D94788', img: 'avatars/4.jpg', full: 'avatars/full4.webp' },
+  { name: 'Marissa', c: '#F5B700', d: '#C98F00', img: 'avatars/5.jpg', full: 'avatars/full5.webp' },
+  { name: 'Elita', c: '#14C8C8', d: '#0E9A9A', img: 'avatars/6.jpg', full: 'avatars/full6.webp' },
+  { name: 'Besnik', c: '#FF5A4D', d: '#C9382E', img: 'avatars/7.jpg', full: 'avatars/full7.webp' },
+  { name: 'Saranda', c: '#3B9DFF', d: '#2373C9', img: 'avatars/8.jpg', full: 'avatars/full8.webp' },
+  { name: 'Gjyshja', c: '#B5713A', d: '#8A5226', img: 'avatars/9.jpg', full: 'avatars/full9.webp' },
+  { name: 'Gjyshi', c: '#6B7A99', d: '#4E5A73', img: 'avatars/10.jpg', full: 'avatars/full10.webp' }
 ];
 const charName = i => shared.get('name' + i, CHARS[i].name) || CHARS[i].name;
 const avatarSrc = i => shared.get('img' + i, null) || CHARS[i].img;

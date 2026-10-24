@@ -35,7 +35,7 @@ const SFX = Object.assign({}, CORE_SFX, {
 const ME = { ch: store.get('ch', 0), name: store.get('name', '') };
 if (Q.get('c') != null && !isNaN(+Q.get('c'))) ME.ch = +Q.get('c');
 if (Q.get('n')) ME.name = Q.get('n');
-if (!(ME.ch >= 0 && ME.ch < 4)) ME.ch = 0;
+if (!(ME.ch >= 0 && ME.ch < CHARS.length)) ME.ch = 0;
 const myName = () => (ME.name.trim() || charName(ME.ch)).slice(0, 14);
 const saveMe = () => { store.set('ch', ME.ch); store.set('name', ME.name); };
 if (REMOTE) saveMe();
@@ -188,8 +188,8 @@ function startLocal() {
 }
 let botNo = 0;
 function botPlayer(id, team, lvl, used) {
-  let ch = Math.floor(Math.random() * 4);
-  if (used) { const free = [0, 1, 2, 3].filter(c => !used.includes(c)); if (free.length) ch = pick(free); used.push(ch); }
+  let ch = Math.floor(Math.random() * CHARS.length);
+  if (used) { const free = CHARS.map((_, i) => i).filter(c => !used.includes(c)); if (free.length) ch = pick(free); used.push(ch); }
   return { id: id || 'b' + (++botNo), name: '🤖 ' + charName(ch), ch, team, bot: lvl };
 }
 function runSim(players, minutes) {
@@ -346,7 +346,7 @@ function hostRecv(d) {
   let m; try { m = JSON.parse(d.slice(bar + 1)); } catch (e) { return; }
   if (m.t === 'in') { if (G.sim && HOST.inGame) G.sim.input(id, +m.x || 0, +m.y || 0, m.k | 0, m.p | 0); return; }
   if (m.t === 'hi') {
-    const name = String(m.name || 'Spelare').slice(0, 14), ch = Math.abs(m.ch | 0) % 4;
+    const name = String(m.name || 'Spelare').slice(0, 14), ch = Math.abs(m.ch | 0) % CHARS.length;
     const st = {}; for (const k of SIM.STATS) st[k] = Math.max(0, Math.min(SIM.STMAX, +((m.st || {})[k]) || 0));
     const lvl = Math.max(1, Math.min(LVL_MAX, m.lvl | 0));
     let p = HOST.lobby.find(p => p.id === id);

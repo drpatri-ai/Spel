@@ -43,8 +43,8 @@ h2{margin:0;font-size:clamp(24px,6vmin,38px);text-align:center;text-shadow:0 3px
 .logo span{display:inline-block;color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;animation:bob 1.6s ease-in-out infinite;text-shadow:0 6px 0 var(--ink)}
 .logo .sp{width:.3em}
 @keyframes bob{50%{transform:translateY(-10px) rotate(-4deg)}}
-.dance{display:flex;gap:min(4vw,22px);margin:6px 0 10px}
-.dance .av{width:clamp(56px,15vmin,96px);animation:hop 1.2s ease-in-out infinite}
+.dance{display:flex;flex-wrap:wrap;justify-content:center;gap:min(2.5vw,14px);margin:6px 0 10px;max-width:96vw}
+.dance .av{width:clamp(40px,8.5vmin,70px);animation:hop 1.2s ease-in-out infinite}
 @keyframes hop{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-16px) rotate(-8deg)}60%{transform:translateY(0) rotate(6deg)}}
 .menu{display:flex;flex-direction:column;gap:16px;align-items:center}
 
@@ -55,12 +55,13 @@ h2{margin:0;font-size:clamp(24px,6vmin,38px);text-align:center;text-shadow:0 3px
 .levels .btn{flex-direction:column;gap:0;padding:12px 26px}
 .levels .btn small{font-size:.62em;font-weight:400;opacity:.92}
 
-.chars{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;width:min(94vw,560px)}
-@media (min-aspect-ratio:5/4){.chars{grid-template-columns:repeat(4,minmax(0,1fr));width:min(94vw,980px)}}
-.char{background:var(--card);border-radius:26px;padding:14px 10px 12px;display:flex;flex-direction:column;align-items:center;gap:8px;
+.chars{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:min(96vw,560px)}
+@media (min-aspect-ratio:5/4){.chars{grid-template-columns:repeat(5,minmax(0,1fr));width:min(96vw,1000px)}}
+.screen:has(.chars){overflow-y:auto;justify-content:safe center}
+.char{background:var(--card);border-radius:26px;padding:10px 6px 8px;display:flex;flex-direction:column;align-items:center;gap:4px;
   box-shadow:0 6px 0 #C9C3E8;position:relative;transition:transform .15s}
-.char .av{width:72%}
-.char b{font-size:clamp(17px,4vmin,24px)}
+.char .av{width:min(66%,17dvh)}
+.char b{font-size:clamp(14px,3.4vmin,20px)}
 .char:active{transform:scale(.96)}
 .char.taken{opacity:.45;filter:grayscale(.6)}
 .char.taken::after{content:attr(data-tag);position:absolute;top:10px;right:10px;background:var(--ink);color:#fff;font-size:13px;padding:3px 9px;border-radius:10px}

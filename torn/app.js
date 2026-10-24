@@ -123,7 +123,7 @@ function land() {
   const dx = b.x - tx;
   const limit = k === 0 ? BW * 0.9 : BW * 0.72;
   if (Math.abs(dx) > limit) {          // missar – våningen ramlar av
-    T.falling.push({ x: b.x, y: b.y, vx: Math.sign(dx || 1) * 3 + b.vx * 0.3, vy: 2, rot: 0, vr: Math.sign(dx || 1) * 3, col: FLOOR_COLS[k % FLOOR_COLS.length], face: k % 4, k });
+    T.falling.push({ x: b.x, y: b.y, vx: Math.sign(dx || 1) * 3 + b.vx * 0.3, vy: 2, rot: 0, vr: Math.sign(dx || 1) * 3, col: FLOOR_COLS[k % FLOOR_COLS.length], face: k % CHARS.length, k });
     T.block = null;
     T.lives--;
     T.combo = 0;
@@ -151,7 +151,7 @@ function land() {
     if (Math.abs(dx) > BW * 0.35) { say(tx, topY() + BH * 1.8, pick(['Oj, det vinglar!', 'Hoppsan!', 'Nära ögat!']), '#fff'); cheer(pick(['Försiktigt! 😬', 'Det gungar!', 'Oj oj oj…'])); }
   }
   const people = perfect ? 12 + T.combo * 4 : Math.max(2, Math.round(10 - Math.abs(dx) * 3));
-  T.floors.push({ x: baseX + rel - swayAt(topY()) + swayAt(topY()), col: FLOOR_COLS[k % FLOOR_COLS.length], face: (k + me) % 4, people, win: hash(k) });
+  T.floors.push({ x: baseX + rel - swayAt(topY()) + swayAt(topY()), col: FLOOR_COLS[k % FLOOR_COLS.length], face: (k + me) % CHARS.length, people, win: hash(k) });
   // floor.x lagras i tornets egna koordinater (utan svaj)
   T.floors[k].x = baseX + rel;
   T.people += people;
@@ -390,13 +390,13 @@ function drawCrane() {
     if (T.phase === 'swing') {
       ctx.strokeStyle = '#2B235088'; ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(SX(h.x - BW * 0.4), SY(h.y - 0.6)); ctx.moveTo(hx, hy); ctx.lineTo(SX(h.x + BW * 0.4), SY(h.y - 0.6)); ctx.stroke();
-      drawFloor(h.x, h.y - 0.6 - BH, h.th * 0.3, FLOOR_COLS[n() % FLOOR_COLS.length], (n() + me) % 4, n());
+      drawFloor(h.x, h.y - 0.6 - BH, h.th * 0.3, FLOOR_COLS[n() % FLOOR_COLS.length], (n() + me) % CHARS.length, n());
     }
   }
 }
 function drawFx() {
   const sc = s();
-  if (T.block) drawFloor(T.block.x, T.block.y, T.block.rot, FLOOR_COLS[n() % FLOOR_COLS.length], (n() + me) % 4, n());
+  if (T.block) drawFloor(T.block.x, T.block.y, T.block.rot, FLOOR_COLS[n() % FLOOR_COLS.length], (n() + me) % CHARS.length, n());
   for (const f of T.falling) drawFloor(f.x, f.y, f.rot, f.col, f.face, f.k);
   for (const p of T.parts) { ctx.globalAlpha = 1 - p.life / p.max; ctx.fillStyle = p.c; ctx.beginPath(); ctx.arc(SX(p.x), SY(p.y), Math.max(2, p.r * sc), 0, 7); ctx.fill(); }
   ctx.globalAlpha = 1;

@@ -33,7 +33,7 @@ add(family([[0, 0], [1, 0], [2, 0], [2, 1]], true), 3);   // L
 add(family([[0, 0], [0, 1], [0, 2], [1, 1]]), 2.5);       // T
 add(family([[0, 1], [0, 2], [1, 0], [1, 1]], true), 2);   // S/Z
 add(family([[0, 0], [1, 0], [2, 0], [2, 1], [2, 2]]), 1.5); // stort hörn
-const COLORS = [...CHARS.map(c => c.c), '#FFD23F', '#3B9DFF', '#14C8C8', '#FF4D6D'];
+const COLORS = [...CHARS.slice(0, 4).map(c => c.c), '#FFD23F', '#3B9DFF', '#14C8C8', '#FF4D6D'];
 
 function randShape() {
   const tot = SHAPES.reduce((a, s) => a + s.w, 0);

@@ -14,7 +14,13 @@ const ST_BASE = [
   { drb: 3 },            // Leah – fotbollstjejen
   { spd: 3 },            // Leon
   { sho: 2, tck: 2 },    // Patriot
-  { pas: 3 }             // Hanna
+  { pas: 3 },            // Hanna
+  { spd: 2, drb: 1 },    // Marissa
+  { pas: 2, drb: 1 },    // Elita
+  { sho: 3 },            // Besnik
+  { tck: 3 },            // Saranda
+  { pas: 2, tck: 1 },    // Gjyshja
+  { tck: 2, sho: 1 }     // Gjyshi
 ];
 const PT_MAX = 20;          // max poäng man själv lägger på en egenskap
 const LVL_MAX = 60;

@@ -10,7 +10,13 @@ const PAF_CHAR = [
   { base: { kick: 10 }, rig: { neck: 0.31, hip: 0.6, legAmp: 1 } },
   { base: { luck: 25 }, rig: { neck: 0.21, hip: 0.66, legAmp: 0.9 } },
   { base: { strong: 40 }, rig: { neck: 0.165, hip: 0.58, legAmp: 0.9 } },
-  { base: { feather: 14 }, rig: { neck: 0.18, hip: 0.62, legAmp: 0.45 } }
+  { base: { feather: 14 }, rig: { neck: 0.18, hip: 0.62, legAmp: 0.45 } },
+  { base: { luck: 15, feather: 6 }, rig: { neck: 0.27, hip: 0.62, legAmp: 0.95 } },   // Marissa
+  { base: { feather: 12, kick: 4 }, rig: { neck: 0.24, hip: 0.58, legAmp: 0.9 } },   // Elita
+  { base: { kick: 8, strong: 20 }, rig: { neck: 0.26, hip: 0.6, legAmp: 0.95 } },    // Besnik
+  { base: { luck: 20, kick: 4 }, rig: { neck: 0.23, hip: 0.62, legAmp: 0.8 } },      // Saranda
+  { base: { strong: 30, luck: 6 }, rig: { neck: 0.24, hip: 0.62, legAmp: 0.35 } },  // Gjyshja
+  { base: { kick: 12, strong: 10 }, rig: { neck: 0.22, hip: 0.6, legAmp: 0.8 } }     // Gjyshi
 ];
 CHARS.forEach((c, i) => Object.assign(c, PAF_CHAR[i]));
 
@@ -140,7 +146,7 @@ document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click'
 function renderSelect() {
   const cup = mode === 'cup';
   $('selTitle').textContent = cup ? 'Vilka är med?' : 'Vem ska flyga?';
-  $('selSub').textContent = cup ? 'Välj 2–4 figurer i den ordning ni ska sparka. 3 sparkar var – längst sammanlagt vinner!' : 'Varje figur går upp i nivå och blir starkare';
+  $('selSub').textContent = cup ? 'Välj minst 2 figurer i den ordning ni ska sparka. 3 sparkar var – längst sammanlagt vinner!' : 'Varje figur går upp i nivå och blir starkare';
   const rec = store.get('rec', {});
   $('chars').innerHTML = CHARS.map((C, i) => {
     const o = cupPick.indexOf(i);

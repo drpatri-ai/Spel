@@ -53,7 +53,7 @@ function show(id) {
   if (id === 'join') buildJoin();
   if (id === 'lobby') buildLobby();
   if (id === 'stats') buildStats();
-  if (id === 'game') { resize(); }
+  if (id === 'game') { resize(); } else CROWD.soundOff();
   if (window.Android && Android.keepAwake) try { Android.keepAwake(id === 'game' || id === 'lobby'); } catch (e) { }
 }
 function logo() {
@@ -237,7 +237,7 @@ function events(ev) {
     if (e === 'k') SFX.kick();
     else if (e === 'p') SFX.pass();
     else if (e === 'w') SFX.wall();
-    else if (e === 'post') { SFX.post(); buzz(15); }
+    else if (e === 'post') { SFX.post(); CROWD.ooh(); buzz(15); }
     else if (e === 't') SFX.touch();
     else if (e === 'tk') SFX.tackle();
     else if (e === 'dr') SFX.dribble();
@@ -259,6 +259,7 @@ function myTeam() {
 function onGoal(g) {
   if (G.mode === 'host') hostAll(g);
   const mine = g.team === myTeam();
+  CROWD.goal(g.team); confetti();
   if (mine) { SFX.goal(); buzz(60); } else { SFX.sad(); buzz(25); }
   let sub = g.by ? (g.own ? `Självmål av ${g.by} 🙈` : g.by + (g.assist ? ` (pass: ${g.assist})` : '')) : '';
   flash(g.own ? 'Självmål!' : 'MÅÅÅL!', `${TEAM[g.team].e} ${sub}`, 2300, g.own ? null : g.ch);
@@ -684,14 +685,14 @@ function computeView(focus) {
   const portrait = H > W * 1.05;
   const team = myTeam();
   const th = (portrait ? -Math.PI / 2 : 0) + (team === 1 ? Math.PI : 0);
-  const wx = F.OX + 22, wy = F.OY + 22;   // halva världen som ska synas
+  const wx = CROWD.W0, wy = CROWD.H0;   // halva världen som ska synas (plan + läktare)
   const top = 54;                          // plats för resultattavlan
   const alongX = portrait ? H - top : W, alongY = portrait ? W : H - top;   // skärmens mått längs planens x och y
   const fit = Math.min(alongX / (2 * wx), alongY / (2 * wy));
   const s = Math.max(fit, Math.min(W, H) < 500 ? 0.72 : 0.6);
   const hx = alongX / s / 2, hy = alongY / s / 2;
   const lim = (v, h, w) => h >= w ? 0 : Math.max(-(w - h), Math.min(w - h, v));
-  return { th, s, cx: lim(focus ? focus.x : 0, hx, wx), cy: lim(focus ? focus.y : 0, hy, wy), portrait, top };
+  return { th, s, cx: lim(focus ? focus.x : 0, hx, wx), cy: lim(focus ? focus.y : 0, hy, wy), portrait, top, hx, hy };
 }
 
 /* läget att rita: värden/lokalt direkt från matchen, hos klienten mellan två mottagna lägen */
@@ -732,6 +733,7 @@ function frame(now) {
   const fx = me ? me.x * 0.55 + st.ball.x * 0.45 : st.ball.x, fy = me ? me.y * 0.55 + st.ball.y * 0.45 : st.ball.y;
   G.cam.x += (fx - G.cam.x) * Math.min(1, dt * 4); G.cam.y += (fy - G.cam.y) * Math.min(1, dt * 4);
   G.view = computeView(G.cam);
+  CROWD.update(dt, st);
   draw(st, now / 1000);
   hud(st);
 }
@@ -752,12 +754,13 @@ function hud(st) {
 function draw(st, t) {
   const v = G.view;
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-  ctx.fillStyle = '#1C6E35'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#2E2A40'; ctx.fillRect(0, 0, W, H);
   ctx.translate(W / 2, H / 2 + v.top / 2);
   ctx.rotate(v.th);
   ctx.scale(v.s, v.s);
   ctx.translate(-v.cx, -v.cy);
   drawField();
+  CROWD.draw(ctx, t, v, CHARS.map((_, i) => charName(i).toUpperCase()));
   // skuggor först
   ctx.fillStyle = '#00000038';
   for (const p of st.P) { ctx.beginPath(); ctx.ellipse(p.x + 4, p.y + 5, F.PR, F.PR * 0.9, 0, 0, 7); ctx.fill(); }

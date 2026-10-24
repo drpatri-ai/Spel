@@ -7,12 +7,12 @@
 const SIM = (() => {
   const F = {
     FX: 550, FY: 260,          // halva planens längd/bredd (mittpunkt i 0,0)
-    GY: 88, GD: 52,            // halva målbredden, måldjup
+    GY: 112, GD: 54,           // halva målbredden, måldjup
     PR: 20, BR: 12, POST: 7,   // radier: spelare, boll, stolpe
     OX: 610, OY: 305,          // hur långt utanför linjerna spelarna får springa
     CR: 85,                    // mittcirkel
     ACC: 0.15, ACC_K: 0.10, DAMP: 0.96, BDAMP: 0.99,
-    KICK: 6.6, REACH: 5,
+    KICK: 7.0, REACH: 5,
     E_PB: 0.3, E_PP: 0.25, E_BW: 0.55, E_POST: 0.5
   };
   const STATS = ['spd', 'drb', 'sho', 'pas', 'tck'];
@@ -563,7 +563,7 @@ const SIM = (() => {
         }
       } else if (ai.role === 'keep') {
         tx = mgx + s * (F.PR + 34);
-        ty = clamp(b.y * 0.55, -F.GY * 0.75, F.GY * 0.75);
+        ty = clamp((p.bot >= 2 ? b.y : ai.by) * 0.5, -F.GY * 0.6, F.GY * 0.6);   // målvakten hänger med lite efter
       } else if (ai.role === 'wait') {
         tx = -s * (F.CR + F.PR + 10); ty = clamp(b.y, -40, 40);
       } else {

@@ -1,5 +1,5 @@
 {
- "version": "d5e5188b19a3",
+ "version": "d8af4eec844b",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -12,6 +12,10 @@
   "avatars/full4.webp",
   "block.html",
   "block/app.js",
+  "boll.html",
+  "boll/app.js",
+  "boll/qrcode.js",
+  "boll/sim.js",
   "fonts/fredoka.woff2",
   "fyra.html",
   "fyra/ai.js",

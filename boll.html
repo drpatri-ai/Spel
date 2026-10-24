@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Fotboll</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#2FB45A">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(170deg,#7FD1FF 0%,#B9F0C8 50%,#3FC46A 100%)}
+.hidden{display:none!important}
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:10px 16px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:64px}
+.me b{font-size:20px}
+.me small{display:block;color:var(--muted)}
+.wins{font-weight:700;font-size:clamp(15px,4vmin,20px);text-align:center;text-shadow:0 2px 0 #fff8}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #menu{flex-direction:row;gap:28px}
+  #menu .logo .l1{font-size:44px}#menu .logo .l2{font-size:38px}
+}
+
+/* välj figur och namn */
+.char.chosen{box-shadow:0 6px 0 var(--d),0 0 0 5px var(--c)}
+.namebox{display:flex;gap:10px;align-items:center;background:var(--card);border-radius:20px;padding:10px 14px;box-shadow:0 5px 0 #C9C3E8;width:min(94vw,560px)}
+.namebox input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:600;border:3px solid #E4E0F7;border-radius:14px;padding:8px 12px;color:var(--ink);-webkit-user-select:text;user-select:text}
+#meScr .chars .av{width:60%}
+#meScr{gap:10px}
+@media (max-height:560px){#meScr .chars .av{width:42%} #meScr .char{padding:8px 6px}}
+
+/* inställningar */
+.opt{background:var(--card);border-radius:22px;padding:12px 14px;box-shadow:0 5px 0 #C9C3E8;display:flex;flex-direction:column;gap:8px}
+.opt h4{margin:0;font-size:18px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:64px;padding:10px 8px;border-radius:14px;background:#F0EDFF;font-size:16px;font-weight:600;box-shadow:0 3px 0 #D6D1EE}
+.seg button.on{background:#34C759;color:#fff;box-shadow:0 3px 0 #219A40}
+.setup{width:min(94vw,560px);display:flex;flex-direction:column;gap:12px;margin-top:64px;padding-bottom:20px}
+
+/* gå med */
+.found{display:flex;flex-direction:column;gap:10px;width:100%}
+.found .btn{min-width:0;width:100%}
+.ipbox{display:flex;gap:8px}
+.ipbox input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:600;border:3px solid #E4E0F7;border-radius:14px;padding:8px 12px;color:var(--ink);-webkit-user-select:text;user-select:text}
+.note{color:var(--muted);font-size:15px;margin:0;line-height:1.35}
+.spin{display:inline-block;animation:spin2 1s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+
+/* lobby */
+.lobby{width:min(96vw,1000px);display:grid;grid-template-columns:1fr;gap:12px;margin-top:64px;padding-bottom:20px}
+@media (min-aspect-ratio:5/4){.lobby{grid-template-columns:1.25fr 1fr;align-items:start}}
+.teams{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.team{border-radius:22px;padding:10px;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--tc) 18%,#fff);box-shadow:0 5px 0 color-mix(in srgb,var(--tc) 55%,#fff)}
+.team h3{margin:0;text-align:center;color:var(--td);font-size:20px}
+.pl{display:flex;align-items:center;gap:8px;background:#fff;border-radius:16px;padding:6px 8px;font-weight:600;font-size:16px;min-height:52px}
+.pl .av{width:40px;border-width:3px}
+.pl span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl small{font-size:12px;color:var(--muted);font-weight:500}
+.pl.bot{opacity:.65;font-weight:500}
+.pl.mine{box-shadow:0 0 0 3px #FFD23F}
+.joininfo{display:flex;gap:12px;align-items:center}
+.qr{background:#fff;border-radius:14px;padding:6px;flex:none;line-height:0}
+.qr svg,.qr img{width:min(34vw,150px);height:auto}
+.url{font-weight:700;font-size:clamp(17px,4.2vmin,24px);white-space:nowrap}
+.wait{text-align:center;font-weight:600;font-size:18px}
+
+/* spelet */
+#game{padding:0;gap:0;background:#1F7A3A}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:flex-start;justify-content:space-between;pointer-events:none;z-index:3}
+.hud>*{pointer-events:auto}
+.board{display:flex;align-items:stretch;border-radius:16px;overflow:hidden;box-shadow:0 4px 0 #0004;font-weight:700;pointer-events:none}
+.board .s{padding:4px 14px;color:#fff;font-size:clamp(22px,5.5vmin,30px);min-width:52px;text-align:center}
+.board .s.r{background:#FF4D6D}.board .s.b{background:#3B9DFF}
+.board .t{background:#fffe;padding:4px 12px;font-size:clamp(17px,4.2vmin,22px);display:flex;align-items:center;min-width:76px;justify-content:center}
+.board .t.gold{background:#FFD23F}
+.banner{position:absolute;left:0;right:0;top:28%;text-align:center;font-weight:700;color:#fff;-webkit-text-stroke:3px var(--ink);paint-order:stroke fill;
+  text-shadow:0 5px 0 var(--ink);pointer-events:none;z-index:4;font-size:clamp(30px,9vmin,64px);display:flex;flex-direction:column;align-items:center;gap:6px}
+.banner small{font-size:.45em;-webkit-text-stroke:2px var(--ink);text-shadow:0 3px 0 var(--ink)}
+.banner .av{width:clamp(60px,16vmin,110px);-webkit-text-stroke:0}
+.banner.pop{animation:goalPop .6s cubic-bezier(.2,1.8,.4,1)}
+@keyframes goalPop{from{transform:scale(.2) rotate(-10deg);opacity:0}}
+.hintline{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 6px);text-align:center;color:#fff;font-weight:600;font-size:clamp(14px,3.4vmin,18px);
+  text-shadow:0 2px 0 #0006;pointer-events:none;z-index:3}
+/* spak och knappar */
+#joyZone{position:absolute;left:0;bottom:0;width:55%;height:78%;z-index:2;touch-action:none}
+.joy{position:absolute;width:132px;height:132px;margin:-66px 0 0 -66px;border-radius:50%;background:#ffffff30;border:3px solid #ffffff90;pointer-events:none;z-index:3}
+.joy i{position:absolute;left:50%;top:50%;width:62px;height:62px;margin:-31px 0 0 -31px;border-radius:50%;background:#fffd;box-shadow:0 4px 0 #0003}
+.joy.idle{opacity:.55}
+.acts{position:absolute;right:var(--safe-r);bottom:calc(var(--safe-b) + 4px);display:flex;align-items:flex-end;gap:12px;z-index:4}
+.abtn{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;touch-action:none;user-select:none;box-shadow:0 7px 0 #0004;
+  font-size:clamp(14px,3.4vmin,18px);line-height:1.05;text-align:center;transition:transform .05s,box-shadow .05s}
+.abtn span{font-size:1.9em;display:block}
+.abtn.down{transform:translateY(5px) scale(.95);box-shadow:0 2px 0 #0004}
+#bShoot{width:clamp(96px,25vmin,136px);height:clamp(96px,25vmin,136px);background:radial-gradient(circle at 40% 30%,#FF8FA3,#E0294B)}
+#bPass{width:clamp(70px,18vmin,98px);height:clamp(70px,18vmin,98px);background:radial-gradient(circle at 40% 30%,#8FD0FF,#2373C9);margin-bottom:28px}
+.res{width:100%;display:flex;flex-direction:column;gap:6px}
+.res .r{display:flex;align-items:center;gap:8px;background:#F4F1FF;border-radius:14px;padding:6px 10px;font-size:16px}
+.res .r .av{width:34px;border-width:2px}
+.res .r span{flex:1}
+.res .r b{font-size:17px}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+    <div class="wins" id="wins"></div>
+    <button class="me" id="meCard"></button>
+    <div class="menu">
+      <button class="btn green" id="toSetup">🤖 Mot datorn</button>
+      <button class="btn blue hidden" id="toHost">📡 Starta nätverksmatch</button>
+      <button class="btn purple" id="toJoin">🔗 Gå med i match</button>
+      <button class="btn white small" id="toHub">🏠 Alla spel</button>
+    </div>
+  </div>
+</section>
+
+<section id="meScr" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="meBack">⬅️</button><span></span></div>
+  <h2 style="margin-top:58px">Vem spelar du?</h2>
+  <div class="chars" id="chars"></div>
+  <div class="namebox"><span style="font-size:26px">✏️</span><input id="nameIn" type="text" maxlength="14" placeholder="Ditt namn" autocomplete="off"></div>
+  <button class="btn green" id="meOk">✅ Klar</button>
+</section>
+
+<section id="setup" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Mot datorn 🤖</h2><span style="width:48px"></span></div>
+  <div class="setup" id="setupBox"></div>
+</section>
+
+<section id="join" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Gå med 🔗</h2><span style="width:48px"></span></div>
+  <div class="setup" id="joinBox"></div>
+</section>
+
+<section id="lobby" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="lobbyBack">⬅️</button><h2>Laguppställning</h2><span style="width:48px"></span></div>
+  <div class="lobby" id="lobbyBox"></div>
+</section>
+
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div id="joyZone"></div>
+  <div class="joy idle" id="joy"><i id="knob"></i></div>
+  <div class="hud">
+    <button class="ibtn" id="gPause">⏸️</button>
+    <div class="board"><div class="s r" id="sR">0</div><div class="t" id="sT">3:00</div><div class="s b" id="sB">0</div></div>
+    <button class="ibtn" id="gSound">🔊</button>
+  </div>
+  <div class="banner hidden" id="banner"></div>
+  <div class="hintline" id="hint"></div>
+  <div class="acts">
+    <button class="abtn" id="bPass"><div><span>👟</span>PASSA</div></button>
+    <button class="abtn" id="bShoot"><div><span>⚽</span>SKJUT</div></button>
+  </div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="boll/qrcode.js"></script>
+<script src="boll/sim.js"></script>
+<script src="boll/app.js"></script>
+</body>
+</html>

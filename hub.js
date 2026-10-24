@@ -13,8 +13,10 @@ const GAMES = [
     stat: () => { const b = makeStore('bb').get('best', 0); return b ? `⭐ Rekord ${b} poäng` : ''; } },
   { id: 'torn', title: 'Tornet', sub: 'Bygg våning för våning – innan det rasar!', icon: '🏢', c: '#FF6FAE', d: '#D94788',
     stat: () => { const b = makeStore('bt').get('best', 0); return b ? `🏢 Rekord ${b} våningar` : ''; } },
-  { id: 'hill', title: 'Backracet', sub: 'Kör uppför backarna – akta huvudet!', icon: '🚗', c: '#3B9DFF', d: '#2373C9', isNew: true,
-    stat: () => { const b = makeStore('bh').get('best', {}); const m = Math.max(0, ...Object.values(b)); return m ? `🏁 Rekord ${m} m` : ''; } }
+  { id: 'hill', title: 'Backracet', sub: 'Kör uppför backarna – akta huvudet!', icon: '🚗', c: '#3B9DFF', d: '#2373C9',
+    stat: () => { const b = makeStore('bh').get('best', {}); const m = Math.max(0, ...Object.values(b)); return m ? `🏁 Rekord ${m} m` : ''; } },
+  { id: 'boll', title: 'Fotboll', sub: 'Mot datorn eller familjen i samma wifi', icon: '⚽', c: '#2FB45A', d: '#1F8A42', isNew: true,
+    stat: () => { const w = makeStore('bf').get('wins', [0, 0, 0]).reduce((a, b) => a + b, 0); return w ? `🏆 ${w} vinster mot datorn` : ''; } }
 ];
 
 let current = 'hub';

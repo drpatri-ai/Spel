@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Staden</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#7FD1FF">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:#2B2350}
+#cv{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#cv.fadein{animation:fade .4s}
+.bar{position:fixed;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;gap:8px;align-items:center;z-index:5;pointer-events:none}
+.bar>*{pointer-events:auto}
+.bar .sp{flex:1;pointer-events:none}
+.place{background:#fffe;border-radius:16px;padding:6px 14px;font-weight:700;font-size:clamp(15px,4vmin,22px);box-shadow:0 4px 0 #0003;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.ibtn{position:relative}
+.ibtn .n{position:absolute;top:-6px;right:-6px;background:#FF4D6D;color:#fff;border-radius:10px;font-size:12px;font-weight:700;padding:1px 6px}
+.ibtn.hot{transform:scale(1.25);box-shadow:0 0 0 4px #FFD23F}
+#trash{position:fixed;left:50%;bottom:calc(var(--safe-b) + 6px);transform:translateX(-50%) scale(.6);width:76px;height:76px;border-radius:50%;background:#fffd;font-size:40px;
+  display:grid;place-items:center;box-shadow:0 5px 0 #0003;z-index:6;opacity:0;pointer-events:none;transition:transform .15s,opacity .15s}
+#trash.on{opacity:1;transform:translateX(-50%) scale(1)}
+#trash.hot{background:#FF4D6D;transform:translateX(-50%) scale(1.2)}
+.tray{position:fixed;left:var(--safe-l);right:var(--safe-r);bottom:var(--safe-b);background:#fffe;border-radius:24px;padding:10px;box-shadow:0 6px 0 #0003,0 10px 30px #0004;
+  z-index:7;display:none;flex-direction:column;gap:6px;animation:slideUp .25s}
+.tray.on{display:flex}
+@keyframes slideUp{from{transform:translateY(40px);opacity:0}}
+.tray h4{margin:0 6px;font-size:16px;color:var(--muted)}
+.tray .row{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 6px;background:none;box-shadow:none;border-radius:0;align-items:center;scrollbar-width:none}
+.tray .row::-webkit-scrollbar{display:none}
+.fig{background:none;padding:0;flex:none;position:relative;touch-action:none}
+.fig .av{width:clamp(54px,14vmin,72px);border-width:3px}
+.fig small{position:absolute;bottom:-2px;right:-4px;font-size:18px}
+.fig.here .av{opacity:.55}
+.bi{font-size:44px;background:#F4F1FF;border-radius:16px;width:64px;height:64px;flex:none;touch-action:none}
+.note{color:var(--muted);font-size:15px;margin:0 6px}
+#map{position:fixed;inset:0;background:#2B2350cc;z-index:20;display:none;align-items:center;justify-content:center;padding:20px}
+#map.on{display:flex;animation:fade .2s}
+.mapcard{background:linear-gradient(160deg,#9BE38A,#7FD1FF);border-radius:30px;padding:18px;width:min(96vw,900px);max-height:92dvh;overflow:auto;box-shadow:0 10px 0 #0003}
+.mapcard h2{color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;margin-bottom:10px}
+.places{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.place2,.places .place{display:flex;flex-direction:column;align-items:center;gap:4px;background:#fffe;border-radius:22px;padding:12px 8px;box-shadow:0 5px 0 #0002;font-size:18px}
+.places .place .pi{font-size:52px;animation:hop 1.6s ease-in-out infinite}
+.places .place.cur{box-shadow:0 5px 0 #219A40,0 0 0 4px #34C759}
+.places .place .who{display:flex;flex-wrap:wrap;justify-content:center;gap:2px;min-height:30px}
+.places .place .who .av{width:28px;border-width:2px;box-shadow:none}
+#help{position:fixed;inset:0;background:#2B2350aa;z-index:30;display:none;align-items:center;justify-content:center;padding:20px}
+#help.on{display:flex}
+#help .panel ul{margin:0;padding-left:20px;font-size:17px;line-height:1.5;text-align:left}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="bar">
+  <button class="ibtn" id="bHome">🏠</button>
+  <button class="ibtn" id="bMap">🗺️</button>
+  <div class="place" id="place"></div>
+  <span class="sp"></span>
+  <button class="ibtn" id="bFigs">👪</button>
+  <button class="ibtn" id="bBag">🎒<span class="n" id="bagN"></span></button>
+  <button class="ibtn" id="bReset">🧹</button>
+</div>
+<div id="trash">🗑️</div>
+<div class="tray" id="trayFigs"><h4>Dra in en figur hit</h4><div class="row" id="figs"></div></div>
+<div class="tray" id="trayBag"><h4>Väskan 🎒 – dra ut saker</h4><div class="row" id="bagItems"></div></div>
+<div id="map"><div class="mapcard"><div style="display:flex;justify-content:space-between;align-items:center"><h2>Vart vill du åka? 🗺️</h2><button class="ibtn" id="mapClose">✖️</button></div>
+  <div class="places" id="mapBox"></div></div></div>
+<div id="help"><div class="panel"><h3>Välkommen till Staden! 🏙️</h3>
+  <ul><li>Dra figurer och saker vart du vill</li><li>Tryck på saker – kylskåp, tv, lampa, radio, toa…</li>
+  <li>Ge mat till munnen – figuren äter 😋</li><li>Sätt hattar och glasögon på huvudet 👑</li>
+  <li>Lägg någon i sängen, badkaret eller på gungan</li><li>👪 hämtar figurer, 🎒 tar med saker, 🗺️ åker till andra platser</li></ul>
+  <button class="btn green" id="helpOk">Kör! 🚀</button></div></div>
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+<script src="shared/core.js"></script>
+<script src="stad/scenes.js"></script>
+<script src="stad/app.js"></script>
+</body>
+</html>

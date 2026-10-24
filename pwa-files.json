@@ -1,5 +1,5 @@
 {
- "version": "9957cf176239",
+ "version": "e9222c99daee",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -115,6 +115,9 @@
   "schack/engine.js",
   "shared/core.js",
   "shared/style.css",
+  "stad.html",
+  "stad/app.js",
+  "stad/scenes.js",
   "torn.html",
   "torn/app.js"
  ]

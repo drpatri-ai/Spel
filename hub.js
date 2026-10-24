@@ -17,8 +17,9 @@ const GAMES = [
     stat: () => { const b = makeStore('bh').get('best', {}); const m = Math.max(0, ...Object.values(b)); return m ? `🏁 Rekord ${m} m` : ''; } },
   { id: 'boll', title: 'Fotboll', sub: 'Mot datorn eller familjen i samma wifi', icon: '⚽', c: '#2FB45A', d: '#1F8A42',
     stat: () => { const w = makeStore('bf').get('wins', [0, 0, 0]).reduce((a, b) => a + b, 0); return w ? `🏆 ${w} vinster mot datorn` : ''; } },
-  { id: 'krock', title: 'Krockarenan', sub: 'Bygg en stridsbil – krocka mot familjen', icon: '💥', c: '#8B5BFF', d: '#6235D9', isNew: true,
-    stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('krock') || 'null') : makeStore('bk').get('prof', null); } catch (e) { } return p && p.lad ? `⚔️ ${p.lad} segrar i arenan` : ''; } }
+  { id: 'krock', title: 'Krockarenan', sub: 'Bygg en stridsbil – krocka mot familjen', icon: '💥', c: '#8B5BFF', d: '#6235D9',
+    stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('krock') || 'null') : makeStore('bk').get('prof', null); } catch (e) { } return p && p.lad ? `⚔️ ${p.lad} segrar i arenan` : ''; } },
+  { id: 'stad', title: 'Staden', sub: 'Lek med familjen hemma, i parken och i affären', icon: '🏙️', c: '#14C8C8', d: '#0E9A9A', isNew: true, stat: () => '' }
 ];
 
 let current = 'hub';

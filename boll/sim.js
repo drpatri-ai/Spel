@@ -18,9 +18,9 @@ const SIM = (() => {
   const STATS = ['spd', 'drb', 'sho', 'pas', 'tck'];
   const STMAX = 23;
   const LV = [
-    { acc: 0.76, react: 14, aim: 1.0, shoot: 330, miss: 0.35, st: 2, passP: 0.25 },
-    { acc: 0.88, react: 7, aim: 0.55, shoot: 420, miss: 0.15, st: 7, passP: 0.4 },
-    { acc: 0.99, react: 3, aim: 0.22, shoot: 520, miss: 0.04, st: 13, passP: 0.55 }
+    { acc: 0.76, react: 14, aim: 1.0, shoot: 330, miss: 0.35, st: 2, passP: 0.45 },
+    { acc: 0.88, react: 7, aim: 0.55, shoot: 420, miss: 0.15, st: 7, passP: 0.6 },
+    { acc: 0.99, react: 3, aim: 0.22, shoot: 520, miss: 0.04, st: 13, passP: 0.75 }
   ];
   const FORM = {
     1: [[-0.45, 0]],
@@ -249,7 +249,8 @@ const SIM = (() => {
         return;
       }
       const rel = hyp(b.vx - p.vx, b.vy - p.vy);
-      if (p.noGrab <= 0 && this.phase !== 'goal' && rel < 4.6 + 0.13 * p.st.drb) { this.own(i, false); return; }
+      const lp = this.lastPass, fromMate = lp && this.tick - lp.k < 300 && this.players[lp.from] && this.players[lp.from].team === p.team;
+      if (p.noGrab <= 0 && this.phase !== 'goal' && rel < 4.6 + 0.13 * p.st.drb + (fromMate ? 2.6 : 0)) { this.own(i, false); return; }
       if (this.collide(p, b, F.E_PB)) this.touch(i);
     }
     // en motspelare som inte lyckades bryta knuffas undan från bollen
@@ -317,8 +318,10 @@ const SIM = (() => {
       const b = this.ball, owned = b.owner === i;
       const il = hyp(p.ix, p.iy);
       const ax = il > 0.2 ? p.ix / il : nx, ay = il > 0.2 ? p.iy / il : ny;
-      let best = null, bs = 1e9;
-      for (const q of this.players) {
+      let best = p.passTo != null ? this.players[p.passTo] : null, bs = 1e9;
+      p.passTo = null;
+      if (best && best.team !== p.team) best = null;
+      if (!best) for (const q of this.players) {
         if (q === p || q.team !== p.team) continue;
         const dx = q.x - p.x, dy = q.y - p.y, d = hyp(dx, dy);
         if (d < 40) continue;
@@ -335,8 +338,7 @@ const SIM = (() => {
         if (s < bs) { bs = s; best = q; }
       }
       if (owned) {
-        this.release(16);
-        b.x = p.x + ax * (F.PR + F.BR + 2); b.y = p.y + ay * (F.PR + F.BR + 2);
+        this.release(32);
         b.vx = b.vy = 0;
       } else p.noGrab = 12;
       if (best) {
@@ -346,7 +348,7 @@ const SIM = (() => {
         const n = (this.rnd() - 0.5) * 0.3 * (1 - p.st.pas / 25);
         const c = Math.cos(n), s = Math.sin(n);
         [dx, dy] = [(dx * c - dy * s) / D, (dx * s + dy * c) / D];
-        const sp = clamp(D / 100 + 0.8 + 0.03 * p.st.pas, 2.2, 6.4);
+        const sp = clamp(D / 100 + 1.3 + 0.03 * p.st.pas, 3.2, 6.8);
         b.vx = dx * sp; b.vy = dy * sp;
       } else { b.vx += ax * 4; b.vy += ay * 4; }
       p.c.passes++;
@@ -468,6 +470,28 @@ const SIM = (() => {
       };
     }
 
+    /* bästa lagkamraten att passa till (fri passningsväg, ingen motståndare nära) */
+    passOption(p, s) {
+      let best = null;
+      this.players.forEach((q, i) => {
+        if (q === p || q.team !== p.team) return;
+        const dx = q.x - p.x, dy = q.y - p.y, d = hyp(dx, dy);
+        if (d < 70 || d > 560) return;
+        let lane = 1e9, mark = 1e9;
+        for (const o of this.players) {
+          if (o.team === p.team) continue;
+          const t = clamp(((o.x - p.x) * dx + (o.y - p.y) * dy) / (d * d), 0, 1);
+          if (t * d > 28) lane = Math.min(lane, hyp(p.x + dx * t - o.x, p.y + dy * t - o.y));   // den som står precis vid foten hinner inte
+          mark = Math.min(mark, hyp(o.x - q.x, o.y - q.y));
+        }
+        if (lane < 46) return;
+        const fwd = s * dx;
+        const v = fwd * 0.6 + Math.min(mark, 160) * 0.8 - d * 0.15 + (q.bot < 0 ? 50 : 0) + Math.min(lane, 80) * 0.3;
+        if (!best || v > best.v) best = { i, v, fwd, mark, human: q.bot < 0 };
+      });
+      return best;
+    }
+
     /* ---------------- datorspelare ---------------- */
     think(p) {
       const L = LV[p.bot] || LV[1], ai = p.ai;
@@ -476,6 +500,7 @@ const SIM = (() => {
       const P = this.players, me = P.indexOf(p);
       if (this.phase === 'goal' || this.phase === 'end') { p.ix = p.iy = 0; return; }
       const ownerP = b.owner >= 0 ? P[b.owner] : null;
+      ai.carryT = ownerP === p ? (ai.carryT || 0) + 1 : 0;
       if (--ai.t <= 0) {
         ai.t = L.react + Math.floor(this.rnd() * 3);
         const mates = P.filter(q => q.team === p.team);
@@ -503,8 +528,15 @@ const SIM = (() => {
           let threat = null, td = 1e9;
           for (const q of P) if (q.team !== p.team) { const d = hyp(q.x - p.x, q.y - p.y); if (d < td && (q.x - p.x) * s > -20) { td = d; threat = q; } }
           ai.threat = td < 130 ? threat : null;
+          const opt = this.passOption(p, s);
           if (gd < L.shoot && facing > 0.82 && this.rnd() > L.miss) ai.act = 'kick';
-          else if (ai.threat && td < 75 && mates.length > 1 && this.rnd() < L.passP) ai.act = 'pass';
+          else if (opt && (
+              (ai.threat && td < 100 && this.rnd() < L.passP * 0.7) ||                       // pressad: spela vidare
+              (opt.fwd > 90 && opt.mark > 85 && this.rnd() < L.passP * 0.45) ||             // fri lagkamrat längre fram
+              (ai.carryT > 150 && this.rnd() < L.passP * 0.6) ||                             // har haft bollen länge
+              (opt.human && opt.mark > 70 && ai.carryT > 50 && this.rnd() < L.passP * 0.3))) { // spela in människor i laget
+            ai.act = 'pass'; ai.passTo = opt.i;
+          }
           else if (s * p.x < -F.FX + 170 && ai.threat && td < 60) ai.act = 'kick';   // rensa bakifrån
         }
       }
@@ -520,7 +552,7 @@ const SIM = (() => {
         }
         tx = p.x + dx * 80; ty = clamp(p.y + dy * 80, -F.FY + 25, F.FY - 25);
         if (ai.act === 'kick' && p.kickT <= 0) { p.kickT = 3; ai.act = null; }
-        if (ai.act === 'pass' && p.passT <= 0) { p.passT = 3; ai.act = null; }
+        if (ai.act === 'pass' && p.passT <= 0) { p.passT = 3; p.passTo = ai.passTo; ai.act = null; }
       } else if (ai.role === 'chase') {
         if (ownerP) { tx = b.x + (b.x - ownerP.x) * 0.2; ty = b.y + (b.y - ownerP.y) * 0.2; }
         else {

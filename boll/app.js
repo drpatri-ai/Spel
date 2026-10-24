@@ -152,15 +152,15 @@ function scan() {
   window.onNetScan = list => {
     scanning = false;
     if (current !== 'join' || !$('found')) return;
-    $('found').innerHTML = list.length ? list.map(m => `<button class="btn blue" data-ip="${esc(m.ip)}" data-port="${m.port}">⚽ ${esc(m.name)}</button>`).join('')
+    $('found').innerHTML = list.length ? list.map(m => { const k = /^krock:/.test(m.name); return `<button class="btn blue" data-ip="${esc(m.ip)}" data-port="${m.port}" data-page="${k ? 'krock.html' : 'boll.html'}">${k ? '💥 ' + esc(m.name.slice(6)) : '⚽ ' + esc(m.name)}</button>`; }).join('')
       : `<p class="note">Hittade ingen match. Be värden trycka 📡 Starta nätverksmatch – och kolla att ni är på samma wifi.</p>`;
-    $('found').querySelectorAll('[data-ip]').forEach(b => b.onclick = () => { SFX.tap(); goJoin(b.dataset.ip, +b.dataset.port); });
+    $('found').querySelectorAll('[data-ip]').forEach(b => b.onclick = () => { SFX.tap(); goJoin(b.dataset.ip, +b.dataset.port, b.dataset.page); });
   };
   try { Android.netScan(); } catch (e) { scanning = false; }
 }
-function goJoin(ip, port) {
+function goJoin(ip, port, page) {
   const back = location.href.split('?')[0];
-  location.href = `http://${ip}:${port || PORT}/boll.html?n=${encodeURIComponent(myName())}&c=${ME.ch}&back=${encodeURIComponent(back)}`;
+  location.href = `http://${ip}:${port || PORT}/${page || 'boll.html'}?n=${encodeURIComponent(myName())}&c=${ME.ch}&back=${encodeURIComponent(back)}`;
 }
 function startHosting() {
   let r = null;

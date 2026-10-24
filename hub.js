@@ -15,8 +15,10 @@ const GAMES = [
     stat: () => { const b = makeStore('bt').get('best', 0); return b ? `🏢 Rekord ${b} våningar` : ''; } },
   { id: 'hill', title: 'Backracet', sub: 'Kör uppför backarna – akta huvudet!', icon: '🚗', c: '#3B9DFF', d: '#2373C9',
     stat: () => { const b = makeStore('bh').get('best', {}); const m = Math.max(0, ...Object.values(b)); return m ? `🏁 Rekord ${m} m` : ''; } },
-  { id: 'boll', title: 'Fotboll', sub: 'Mot datorn eller familjen i samma wifi', icon: '⚽', c: '#2FB45A', d: '#1F8A42', isNew: true,
-    stat: () => { const w = makeStore('bf').get('wins', [0, 0, 0]).reduce((a, b) => a + b, 0); return w ? `🏆 ${w} vinster mot datorn` : ''; } }
+  { id: 'boll', title: 'Fotboll', sub: 'Mot datorn eller familjen i samma wifi', icon: '⚽', c: '#2FB45A', d: '#1F8A42',
+    stat: () => { const w = makeStore('bf').get('wins', [0, 0, 0]).reduce((a, b) => a + b, 0); return w ? `🏆 ${w} vinster mot datorn` : ''; } },
+  { id: 'krock', title: 'Krockarenan', sub: 'Bygg en stridsbil – krocka mot familjen', icon: '💥', c: '#8B5BFF', d: '#6235D9', isNew: true,
+    stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('krock') || 'null') : makeStore('bk').get('prof', null); } catch (e) { } return p && p.lad ? `⚔️ ${p.lad} av 24 i arenan` : ''; } }
 ];
 
 let current = 'hub';

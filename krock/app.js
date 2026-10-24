@@ -215,7 +215,7 @@ function buildShop() {
 $('shopBack').onclick = () => { SFX.tap(); show(shopBack); };
 
 /* ================= STEGEN (mot datorn) ================= */
-const botName = (b) => `${b.adj}${b.adj.endsWith('-') ? '' : ' '}${charName(b.ch)}`;
+const botName = (b) => b.title;
 function buildLadder() {
   const myPw = KR.power(fullOfCh(ME.ch));
   const rows = [];
@@ -223,7 +223,7 @@ function buildLadder() {
     const b = KR.bot(r, CHARS.length);
     const st = r < prof.lad ? 'done' : r === prof.lad ? 'next' : 'locked';
     const pw = KR.power(b.fb);
-    rows.push(`<div class="rung ${st}" style="${styleOf(b.ch)}"><span class="no">${r + 1}</span>${avHTML(b.ch)}<div class="grow"><b>${esc(botName(b))}</b>
+    rows.push(`<div class="rung ${st}" style="${styleOf(b.ch)}"><span class="no">${r + 1}</span>${avHTML(b.ch)}<div class="grow"><b>${esc(botName(b))}</b> <small style="display:inline">· ${esc(charName(b.ch))} kör</small>
       <small>${CHASSIS[b.fb.c].icon} ${CHASSIS[b.fb.c].name} · ${Object.values(b.fb.s).map(e => WEAPONS[e[0]].icon).join(' ')} · <span class="pw" style="font-size:12px">⚡ ${pw}</span></small>
       <small>Vinst: 🪙 ${b.reward}</small></div>
       ${st === 'done' ? `<button class="btn white" data-r="${r}">✓ Igen</button>` : st === 'next' ? `<button class="btn green" data-r="${r}">⚔️ Slåss!</button>` : '🔒'}</div>`);
@@ -392,6 +392,11 @@ function play(rep, who, opts = {}) {
         else if (e.k === 'burn') { SFX.burn(); parts.push({ x: e.x, y: e.y, vx: 0, vy: 1.5, life: 0, max: 0.5, c: '#77777799', r: 0.1 }); }
         else if (e.k === 'hop') SFX.hop();
         else if (e.k === 'crash') { SFX.bonk(); shake = Math.max(shake, 4); }
+        else if (e.k === 'punch') { SFX.hit(); shake = Math.max(shake, 8); texts.push({ x: e.x, y: e.y + 1, txt: 'PANG!', c: '#FFD23F', life: 0 }); }
+        else if (e.k === 'cannon') { SFX.boom(); shake = Math.max(shake, 5); }
+        else if (e.k === 'thud') { SFX.bonk(); shake = Math.max(shake, 7); for (let i = 0; i < 12; i++) parts.push({ x: e.x, y: e.y, vx: (Math.random() - 0.5) * 6, vy: Math.random() * 5, life: 0, max: 0.5, c: pick(['#888', '#555', '#FFD23F']), r: 0.07 }); }
+        else if (e.k === 'fire') { parts.push({ x: e.x, y: e.y, vx: (Math.random() - 0.5), vy: 2, life: 0, max: 0.6, c: pick(['#FF8A3D', '#FFD23F', '#FF4D6D']), r: 0.12 }); }
+        else if (e.k === 'swoosh') tone(500, .12, { to: 200, vol: .04 });
       }
       // sammanlagd skada från sågar/laser som siffror då och då
       for (const p of parts) { p.life += dt; p.vy -= 12 * dt; p.x += p.vx * dt; p.y += p.vy * dt; }

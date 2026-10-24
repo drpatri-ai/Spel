@@ -7,6 +7,8 @@ const KSIM = (() => {
   const P = typeof KR !== 'undefined' ? KR : require('./parts.js');
   const G = 14, DT = 1 / 60, SUB = 6, ARENA = 12, TMAX = 45, FPS_EVERY = 2;
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+  const STATE = { ang: ['hammare', 'lyft', 'boxare'], on: ['boost', 'raket', 'kanon', 'magnet'], beam: ['laser', 'eld'] };
+  const stKind = id => STATE.ang.includes(id) ? 'ang' : STATE.on.includes(id) ? 'on' : STATE.beam.includes(id) ? 'beam' : '';
   const cross = (ax, ay, bx, by) => ax * by - ay * bx;
   const hyp = Math.hypot;
 
@@ -44,13 +46,29 @@ const KSIM = (() => {
       } else if (id === 'lyft') {
         p.px = mx - 0.05; p.py = my - H * 0.32; p.len = 0.95;
         p.solid.push({ k: 'lyft', plate: true, hx: 0.48, hy: 0.05 });
+      } else if (id === 'borr') {
+        p.len = 0.95; p.r = 0.24;
+        p.zones = [[mx + sx * 0.78, my, 0.22], [mx + sx * 0.45, my, 0.28]];
+      } else if (id === 'kedja') {
+        p.zone = sl === 'top' ? { cx: mx + 0.55, cy: my + 0.42, hx: 0.75, hy: 0.1, ang: 0.45 } : { cx: mx + sx * 0.8, cy: my, hx: 0.78, hy: 0.1, ang: 0 };
+      } else if (id === 'eld') {
+        p.ox = mx + (sl === 'front' ? 0.1 : 0.2); p.oy = my + (sl === 'front' ? 0.05 : 0.22);
+      } else if (id === 'kanon') {
+        p.ox = mx + 0.05; p.oy = my + 0.28;
+      } else if (id === 'magnet') {
+        p.ox = mx + 0.1; p.oy = my + 0.3;
+      } else if (id === 'taggar') {
+        p.solid.push({ cx: mx + sx * 0.12, cy: my, hx: 0.1, hy: H * 0.6, k: 'taggar' });
+      } else if (id === 'boxare') {
+        p.px = mx; p.py = my + 0.05; p.gr = 0.26;
       } else if (id === 'skold') {
         if (sl === 'front' || sl === 'back') p.solid.push({ cx: mx + sx * 0.14, cy: my, hx: 0.12, hy: H * 0.66, k: 'skold' });
         else p.solid.push({ cx: mx, cy: my + 0.1, hx: L * 0.22, hy: 0.07, k: 'skold' });
       }
       parts.push(p);
     }
-    const wheels = C.wheels.map(wx => ({ ax: wx * L / 2.2 * (2.2 / 2.2), ay: -H / 2 - Wh.r * 0.3, r: Wh.r }));
+    const wr = Wh.r * (C.wheelScale || 1);
+    const wheels = C.wheels.map(wx => ({ ax: wx * L / 2.2, ay: -H / 2 - wr * 0.3, r: wr }));
     return { fb, L, H, wedge: !!C.wedge, wheels, parts, mass, hpMax: P.hpOf(fb), C, Wh };
   }
 
@@ -64,7 +82,7 @@ const KSIM = (() => {
     const Wh = g.Wh, n = g.wheels.length;
     const kS = this.M / n * Math.pow(2 * Math.PI * 2.3, 2);
     this.wheels = g.wheels.map(w => ({ ax: w.ax, ay: w.ay, r: w.r, m: Wh.mass, I: 0.5 * Wh.mass * w.r * w.r, x: 0, y: 0, vx: 0, vy: 0, th: 0, om: 0,
-      kS, cS: 2 * 0.55 * Math.sqrt(kS * this.M / n), grip: Wh.grip, travUp: 0.18, travDn: 0.14, contact: false }));
+      kS, cS: 2 * (Wh.bounce ? 0.18 : 0.55) * Math.sqrt(kS * this.M / n), grip: Wh.grip, travUp: 0.18, travDn: 0.14, contact: false }));
     this.y = -Math.min(...g.wheels.map(w => w.ay - w.r)) + 0.02;
     for (const w of this.wheels) { const A = this.toW(w.ax, w.ay); w.x = A.x; w.y = A.y; }
     this.vmax = 6.2 * g.C.speed * Wh.spd * clamp(Math.sqrt(g.C.mass / this.M), 0.75, 1);
@@ -368,7 +386,7 @@ const KSIM = (() => {
             this.damage(E, dmg * dt * (blocked ? 0.3 : 1), qx, qy, null);
             if ((st.dmgT -= dt) <= 0) { st.dmgT = 0.12; this.ev(blocked ? 'clank' : 'spark', qx, qy, 0, E.side); }
           } else if (blocked) {
-            this.damage(E, dmg * dt * 0.25, E.x, E.y, null);   // skakar ändå lite
+            this.damage(E, dmg * dt * 0.35, E.x, E.y, null);   // skakar ändå lite
             if ((st.dmgT -= dt) <= 0) { st.dmgT = 0.2; this.ev('clank', S.x + fw.x * p.r * p.sx, S.y, 0, -1); }
           }
         } else if (p.id === 'lans') {
@@ -378,7 +396,7 @@ const KSIM = (() => {
           if (st.cd <= 0 && (imp > 40 || distTo(eBody, T.x, T.y) < 0.07)) {
             const k = clamp(0.55 + imp / 900, 0.55, 2.3);
             this.damage(E, dmg * k, T.x, T.y, 'hit');
-            st.cd = 0.7;
+            st.cd = 0.8;
           } else if (st.cd <= 0 && impO > 150) {   // stöt mot sköld/lans: lite skada ändå
             this.damage(E, dmg * clamp(impO / 2500, 0.15, 0.6), T.x, T.y, 'hit');
             this.ev('clank', T.x, T.y, 0, -1);
@@ -431,11 +449,83 @@ const KSIM = (() => {
           const cyc = (st.t + 1.2) % 2.8;
           st.on = cyc < 0.65 ? 1 : 0;
           if (st.on) { const a = 11 * Math.sqrt(p.m); c.vx += fw.x * a * dt; c.vy += fw.y * a * dt; }
+        } else if (p.id === 'borr') {
+          const zs = p.zones.map(([zx, zy, zr]) => { const Z = c.toW(zx, zy); return [Z.x, Z.y, zr]; });
+          const onBody = zs.some(([x, y, r]) => distTo(eBody, x, y) < r);
+          const blocked = zs.some(([x, y, r]) => eShapes.some(b => b.k !== 'body' && distTo(b, x, y) < r));
+          if (onBody || blocked) {
+            this.damage(E, dmg * dt * (onBody ? (blocked ? 0.65 : 1) : 0.4), zs[0][0], zs[0][1], null);
+            if ((st.dmgT -= dt) <= 0) { st.dmgT = 0.1; this.ev('spark', zs[0][0], zs[0][1], 0, E.side); }
+          }
+        } else if (p.id === 'kedja') {
+          const z = c.obb(p.zone);
+          const onBody = !!sat(z, eBody);
+          const blocked = eShapes.some(b => b.k !== 'body' && sat(z, b));
+          if (onBody || blocked) {
+            this.damage(E, dmg * dt * (onBody ? (blocked ? 0.3 : 1) : 0.22), E.x, E.y, null);
+            if ((st.dmgT -= dt) <= 0) { st.dmgT = 0.12; const [qx, qy] = closestOn(eBody, z.x, z.y); this.ev(onBody && !blocked ? 'spark' : 'clank', qx, qy, 0, E.side); }
+          }
+        } else if (p.id === 'eld') {
+          const cyc = (st.t + 0.3) % 2.6;
+          st.on = cyc < 1.5 ? 1 : 0;
+          if (st.on) {
+            const O = c.toW(p.ox + 0.3, p.oy);
+            const d = aim(c, O, E);
+            let best = 3.4, hitBody = false;
+            for (const b of eShapes) { const tt = rayOBB(O.x, O.y, d.x, d.y, b); if (tt != null && tt < best) { best = tt; hitBody = b.k === 'body'; } }
+            if (d.y < -0.01) { const tg = -O.y / d.y; if (tg > 0 && tg < best) { best = tg; hitBody = false; } }
+            st.bx = O.x + d.x * best; st.by = O.y + d.y * best;
+            if (hitBody) { this.damage(E, dmg * dt, st.bx, st.by, null); E.burnT = 2.5; E.burnDps = Math.max(E.burnDps || 0, 9 * p.m); }
+          }
+        } else if (p.id === 'kanon') {
+          const O = c.toW(p.ox + 0.55, p.oy + 0.03);
+          const rel = (E.x - O.x) * fw.x + (E.y - O.y) * fw.y;
+          if (st.cd <= 0 && rel > 1 && rel < 15) {
+            const d = aim(c, O, E); const sp = 14;
+            // lite uppåt så kulan når fram trots tyngdkraften
+            const lift = clamp(rel * 9 / (2 * sp * sp), 0, 0.5);
+            const L2 = hyp(d.x, d.y + lift);
+            this.rockets.push({ ball: true, x: O.x, y: O.y, vx: d.x / L2 * sp + c.vx * 0.3, vy: (d.y + lift) / L2 * sp, side: c.side, dmg, t: 0 });
+            st.cd = 3.1; st.on = 0.25;
+            applyAt(c, O.x, O.y, -fw.x * 700 * p.m, -fw.y * 700 * p.m);   // rekyl
+            this.ev('cannon', O.x, O.y, 0, -1);
+          }
+          st.on = Math.max(0, st.on - dt);
+        } else if (p.id === 'magnet') {
+          const O = c.toW(p.ox, p.oy);
+          const dx = O.x - E.x, dy = O.y - E.y, D = hyp(dx, dy);
+          const rel = (E.x - O.x) * fw.x + (E.y - O.y) * fw.y;
+          st.on = D < 8 && rel > 0 ? 1 : 0;
+          if (st.on) { const F = 2600 * p.m * clamp(1.4 - D / 8, 0.3, 1); E.vx += dx / D * F / E.M * dt; E.vy += Math.max(0, dy / D) * F / E.M * dt * 0.3; }
+        } else if (p.id === 'taggar') {
+          const imp = c._hitsStep.filter(hh => hh.pi === i && hh.other === 'body').reduce((a, hh) => a + hh.j, 0);
+          if (st.cd <= 0 && imp > 60) {
+            const hh = c._hitsStep.find(h2 => h2.pi === i && h2.other === 'body');
+            this.damage(E, dmg * clamp(imp / 500, 0.4, 1.8), hh.x, hh.y, 'hit');
+            st.cd = 0.45;
+          }
+        } else if (p.id === 'boxare') {
+          const glove = () => c.toW(p.px + p.sx * (0.3 + st.ang * 1.3), p.py);
+          if (st.phase === 'rest') {
+            const Gp = c.toW(p.px + p.sx * 0.3, p.py);
+            if (st.cd <= 0 && eShapes.some(b => distTo(b, Gp.x, Gp.y) < 1.5)) { st.phase = 'out'; st.cd = 1.15; this.ev('swoosh', Gp.x, Gp.y, 0, -1); }
+          } else if (st.phase === 'out') {
+            st.ang = Math.min(1, st.ang + dt / 0.09);
+            const Gp = glove();
+            if (distTo(eBody, Gp.x, Gp.y) < p.gr) {
+              this.damage(E, dmg, Gp.x, Gp.y, 'hit');
+              applyAt(E, Gp.x, Gp.y, fw.x * 1500 * p.m, fw.y * 1500 * p.m + 300);
+              this.ev('punch', Gp.x, Gp.y, 0, -1);
+              st.phase = 'in';
+            } else if (eShapes.some(b => b.k !== 'body' && distTo(b, Gp.x, Gp.y) < p.gr)) {
+              applyAt(E, Gp.x, Gp.y, fw.x * 900 * p.m, 0); this.ev('clank', Gp.x, Gp.y, 0, -1); st.phase = 'in';
+            } else if (st.ang >= 1) st.phase = 'in';
+          } else if (st.phase === 'in') { st.ang = Math.max(0, st.ang - dt / 0.35); if (st.ang <= 0) st.phase = 'rest'; }
         } else if (p.id === 'lyft') {
           const tipL = { x: p.px + Math.cos(st.ang) * p.len, y: p.py + Math.sin(st.ang) * p.len };
           const T = c.toW(tipL.x, tipL.y);
           if (st.phase === 'rest') {
-            const near = distTo(eBody, T.x, T.y) < 0.45 || E.wheels.some(w => hyp(w.x - T.x, w.y - T.y) < w.r + 0.35);
+            const near = eShapes.some(b => distTo(b, T.x, T.y) < 0.45) || E.wheels.some(w => hyp(w.x - T.x, w.y - T.y) < w.r + 0.35);
             if (st.cd <= 0 && near) {
               st.phase = 'up'; st.cd = 2.3;
               const J = 1750 * p.m;
@@ -448,22 +538,32 @@ const KSIM = (() => {
         }
       });
     }
-    // raketer
+    // brand
+    for (const c of this.cars) {
+      if (c.burnT > 0 && !c.dead && this.endT == null) {
+        c.burnT -= dt; this.damage(c, c.burnDps * dt, c.x, c.y, null);
+        if (Math.random() < 0.15) this.ev('fire', c.x + (Math.random() - 0.5) * c.g.L, c.y + c.g.H * 0.5, 0, c.side);
+        if (c.burnT <= 0) c.burnDps = 0;
+      }
+    }
+    // raketer och kanonkulor
     for (const r of this.rockets) {
       if (r.done) continue;
-      r.t += dt; r.vy -= 3 * dt; r.x += r.vx * dt; r.y += r.vy * dt;
+      r.t += dt; r.vy -= (r.ball ? 9 : 3) * dt; r.x += r.vx * dt; r.y += r.vy * dt;
       const E = this.cars[1 - r.side];
       const hitShape = E.shapes().some(b => inside(b, r.x, r.y, 0.05)) || E.wheels.some(w => hyp(w.x - r.x, w.y - r.y) < w.r);
       if (hitShape || r.y < 0.05 || Math.abs(r.x) > ARENA || r.t > 3) {
         r.done = true;
-        this.ev('boom', r.x, r.y, 0, -2);
+        this.ev(r.ball ? 'thud' : 'boom', r.x, r.y, 0, -2);
         const eBody = E.obb({ cx: 0, cy: 0, hx: E.g.L / 2, hy: E.g.H / 2, k: 'body' });
         const d = distTo(eBody, r.x, r.y);
-        if (d < 2.2 && this.endT == null) {
-          const k = clamp(1 - d / 2.6, 0.15, 1);
+        const R = r.ball ? 0.9 : 2.2;
+        if (d < R && this.endT == null) {
+          const k = r.ball ? clamp(1 - d / 1.2, 0.3, 1) : clamp(1 - d / 2.6, 0.15, 1);
           this.damage(E, r.dmg * k, r.x, r.y + 0.2, 'hit');
           let dx = E.x - r.x, dy = E.y - r.y + 0.4; const L = hyp(dx, dy) || 1;
-          applyAt(E, r.x * 0.3 + E.x * 0.7, r.y * 0.3 + E.y * 0.7, dx / L * 900 * k, dy / L * 900 * k);
+          const J = (r.ball ? 1700 : 900) * k;
+          applyAt(E, r.x * 0.3 + E.x * 0.7, r.y * 0.3 + E.y * 0.7, dx / L * J, dy / L * J);
         }
       }
     }
@@ -506,13 +606,14 @@ const KSIM = (() => {
       for (const w of c.wheels) a.push(r2(w.x), r2(w.y), r2(w.th));
       c.g.parts.forEach((p, i) => {
         const st = c.st[i];
-        if (p.id === 'hammare' || p.id === 'lyft') a.push(r3(st.ang));
-        else if (p.id === 'boost' || p.id === 'raket') a.push(st.on ? 1 : 0);
-        else if (p.id === 'laser') a.push(st.on ? 1 : 0, r2(st.bx), r2(st.by));
+        const k = stKind(p.id);
+        if (k === 'ang') a.push(r3(st.ang));
+        else if (k === 'on') a.push(st.on ? 1 : 0);
+        else if (k === 'beam') a.push(st.on ? 1 : 0, r2(st.bx), r2(st.by));
       });
       return a;
     };
-    this.frames.push([cf(this.cars[0]), cf(this.cars[1]), this.rockets.map(r => [r2(r.x), r2(r.y), r3(Math.atan2(r.vy, r.vx))])]);
+    this.frames.push([cf(this.cars[0]), cf(this.cars[1]), this.rockets.map(r => [r2(r.x), r2(r.y), r3(Math.atan2(r.vy, r.vx)), r.ball ? 1 : 0])]);
   };
 
   Battle.prototype.run = function () {
@@ -546,6 +647,6 @@ const KSIM = (() => {
   };
 
   function fight(fbA, fbB) { return new Battle(fbA, fbB).run(); }
-  return { fight, geom, ARENA, TMAX };
+  return { fight, geom, ARENA, TMAX, stKind };
 })();
 if (typeof module !== 'undefined') module.exports = KSIM;

@@ -18,7 +18,7 @@ const GAMES = [
   { id: 'boll', title: 'Fotboll', sub: 'Mot datorn eller familjen i samma wifi', icon: '⚽', c: '#2FB45A', d: '#1F8A42',
     stat: () => { const w = makeStore('bf').get('wins', [0, 0, 0]).reduce((a, b) => a + b, 0); return w ? `🏆 ${w} vinster mot datorn` : ''; } },
   { id: 'krock', title: 'Krockarenan', sub: 'Bygg en stridsbil – krocka mot familjen', icon: '💥', c: '#8B5BFF', d: '#6235D9', isNew: true,
-    stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('krock') || 'null') : makeStore('bk').get('prof', null); } catch (e) { } return p && p.lad ? `⚔️ ${p.lad} av 24 i arenan` : ''; } }
+    stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('krock') || 'null') : makeStore('bk').get('prof', null); } catch (e) { } return p && p.lad ? `⚔️ ${p.lad} segrar i arenan` : ''; } }
 ];
 
 let current = 'hub';

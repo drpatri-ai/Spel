@@ -104,6 +104,36 @@ body{background:linear-gradient(170deg,#7FD1FF 0%,#B9F0C8 50%,#3FC46A 100%)}
 .res .r .av{width:34px;border-width:2px}
 .res .r span{flex:1}
 .res .r b{font-size:17px}
+/* profil, nivå och XP */
+.lvtag{font-size:.62em;font-weight:600;opacity:.9}
+.phead{display:flex;align-items:center;gap:12px}
+.phead .av{width:62px}
+.phead .grow{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.phead b{font-size:20px}
+.lvl{font-weight:700;font-size:17px;color:var(--ink)}
+.lvl .up{background:#FFD23F;border-radius:8px;padding:1px 8px;animation:bob 1s ease-in-out infinite;display:inline-block}
+.xpbar{position:relative;height:20px;border-radius:10px;background:#E4E0F7;overflow:hidden}
+.xpbar i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#8B7BFF,#FF6FAE);border-radius:10px;transition:width .6s}
+.xpbar span{position:relative;display:block;text-align:center;font-size:13px;font-weight:700;line-height:20px;color:var(--ink)}
+.strow{display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:2px solid #F0EDFF}
+.strow:last-of-type{border-bottom:0}
+.strow .si{font-size:28px;width:36px;text-align:center}
+.strow .grow{flex:1;min-width:0}
+.strow .sn{display:flex;justify-content:space-between;align-items:baseline}
+.strow .sn b{font-size:17px}.strow .sn small{font-weight:700;font-size:16px}
+.sbar{height:12px;border-radius:6px;background:#E4E0F7;overflow:hidden;display:flex;margin:3px 0}
+.sbar i{display:block;height:100%}
+.sbar i.b{background:#C9F2D3}.sbar i.o{background:linear-gradient(90deg,#34C759,#FFD23F)}
+.strow .sd{color:var(--muted);font-size:13px;line-height:1.2;display:block}
+.plus{width:46px;height:46px;border-radius:14px;background:#34C759;color:#fff;font-size:26px;font-weight:700;box-shadow:0 4px 0 #219A40;flex:none}
+.plus:active{transform:translateY(3px);box-shadow:0 1px 0 #219A40}
+.plus:disabled{background:#E4E0F7;box-shadow:0 4px 0 #D6D1EE;color:#fff}
+.xpbox{width:100%;background:#F4F1FF;border-radius:18px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.xptop{display:flex;flex-direction:column;gap:2px}
+.xptop b{font-size:22px;color:#6252D9}
+.xptop span{font-size:12px;color:var(--muted);line-height:1.3}
+.res .r .mini{font-size:11px;color:var(--muted);white-space:nowrap}
+#menu .menu{gap:12px}
 </style>
 </head>
 <body>
@@ -116,6 +146,7 @@ body{background:linear-gradient(170deg,#7FD1FF 0%,#B9F0C8 50%,#3FC46A 100%)}
     <button class="me" id="meCard"></button>
     <div class="menu">
       <button class="btn green" id="toSetup">🤖 Mot datorn</button>
+      <button class="btn pink" id="toStats">🏋️ Min spelare</button>
       <button class="btn blue hidden" id="toHost">📡 Starta nätverksmatch</button>
       <button class="btn purple" id="toJoin">🔗 Gå med i match</button>
       <button class="btn white small" id="toHub">🏠 Alla spel</button>
@@ -129,6 +160,11 @@ body{background:linear-gradient(170deg,#7FD1FF 0%,#B9F0C8 50%,#3FC46A 100%)}
   <div class="chars" id="chars"></div>
   <div class="namebox"><span style="font-size:26px">✏️</span><input id="nameIn" type="text" maxlength="14" placeholder="Ditt namn" autocomplete="off"></div>
   <button class="btn green" id="meOk">✅ Klar</button>
+</section>
+
+<section id="stats" class="screen scroll">
+  <div class="topbar"><span style="width:48px"></span><h2>Min spelare 🏋️</h2><span style="width:48px"></span></div>
+  <div class="setup" id="statsBox"></div>
 </section>
 
 <section id="setup" class="screen scroll">
@@ -170,6 +206,7 @@ body{background:linear-gradient(170deg,#7FD1FF 0%,#B9F0C8 50%,#3FC46A 100%)}
 <script src="shared/core.js"></script>
 <script src="boll/qrcode.js"></script>
 <script src="boll/sim.js"></script>
+<script src="boll/prof.js"></script>
 <script src="boll/app.js"></script>
 </body>
 </html>

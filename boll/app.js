@@ -24,6 +24,10 @@ const SFX = Object.assign({}, CORE_SFX, {
   post: () => [988, 1480].forEach((f, i) => tone(f, .35, { vol: .09, delay: i * .015, type: 'triangle' })),
   whistle: (n = 1, long) => { for (let i = 0; i < n; i++) { const d = long && i === n - 1 ? .6 : .2; tone(2700, d, { vol: .06, delay: i * .28, type: 'square' }); tone(3050, d, { vol: .04, delay: i * .28 + .01 }); } },
   goal: () => { noise(1.8, { type: 'lowpass', f: 700, vol: .4 }); noise(1.2, { f: 2400, vol: .08, delay: .2 }); CORE_SFX.win(); },
+  touch: () => tone(330, .04, { type: 'triangle', vol: .06, to: 260 }),
+  tackle: () => { noise(.12, { f: 500, vol: .22 }); tone(120, .1, { vol: .14, to: 70 }); },
+  dribble: () => [700, 1000].forEach((f, i) => tone(f, .07, { type: 'triangle', vol: .07, delay: i * .05 })),
+  levelup: () => [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, .16, { type: 'square', vol: .06, delay: i * .08 })),
   sad: () => [392, 330, 262].forEach((f, i) => tone(f, .28, { vol: .12, delay: i * .18 }))
 });
 
@@ -48,6 +52,7 @@ function show(id) {
   if (id === 'setup') buildSetup();
   if (id === 'join') buildJoin();
   if (id === 'lobby') buildLobby();
+  if (id === 'stats') buildStats();
   if (id === 'game') { resize(); }
   if (window.Android && Android.keepAwake) try { Android.keepAwake(id === 'game' || id === 'lobby'); } catch (e) { }
 }
@@ -60,7 +65,9 @@ function logo() {
 function buildMenu() {
   $('logo').innerHTML = logo();
   $('meCard').setAttribute('style', styleOf(ME.ch));
+  const pr = PROF.get(ME.ch);
   $('meCard').innerHTML = `${avHTML(ME.ch)}<div style="text-align:left"><small>Du spelar som</small><b>${esc(myName())}</b> ✏️</div>`;
+  $('toStats').innerHTML = `🏋️ Min spelare <small class="lvtag">Nivå ${pr.lvl}${pr.pts ? ` · ✨${pr.pts}` : ''}</small>`;
   $('toHost').classList.toggle('hidden', !canHost());
   const w = store.get('wins', [0, 0, 0]);
   const tot = w.reduce((a, b) => a + b, 0);
@@ -173,7 +180,7 @@ const G = { mode: null, sim: null, myId: null, timer: null, paused: false, roste
 
 function startLocal() {
   const n = setup.size, lvl = setup.lvl;
-  const pl = [{ id: 'me', name: myName(), ch: ME.ch, team: 0, bot: -1 }];
+  const pl = [{ id: 'me', name: myName(), ch: ME.ch, team: 0, bot: -1, st: effSt(ME.ch) }];
   const used = [ME.ch];
   for (let t = 0; t < 2; t++) for (let i = (t === 0 ? 1 : 0); i < n; i++) pl.push(botPlayer('b' + t + i, t, lvl, used));
   G.mode = 'local'; G.myId = 'me';
@@ -187,7 +194,7 @@ function botPlayer(id, team, lvl, used) {
 }
 function runSim(players, minutes) {
   const m = new SIM.Match(players, { minutes });
-  G.sim = m; G.over = false; G.paused = false; G.kSeq = G.pSeq = 0;
+  G.sim = m; G.over = false; G.xpGiven = false; G.paused = false; G.kSeq = G.pSeq = 0;
   m.onGoal = g => onGoal(goalInfo(g));
   m.onEnd = res => {
     const r = Object.assign({ t: 'end' }, res);
@@ -231,6 +238,9 @@ function events(ev) {
     else if (e === 'p') SFX.pass();
     else if (e === 'w') SFX.wall();
     else if (e === 'post') { SFX.post(); buzz(15); }
+    else if (e === 't') SFX.touch();
+    else if (e === 'tk') SFX.tackle();
+    else if (e === 'dr') SFX.dribble();
     else if (e === 'golden') { SFX.whistle(2); flash('Förlängning! ⚡', 'Nästa mål vinner', 2600); }
     else if (e === 'end') SFX.whistle(3, true);
   }
@@ -267,16 +277,39 @@ async function onEnd(r) {
     if (won || G.mode !== 'local') await celebrate(r.mvp.ch, title, mvpTxt, ['⚽', '🏆', '🎉', '⭐', '⚽', '🥅', '✨', '🎊']);
     else SFX.sad();
   }
-  const rows = r.stats.filter(s => s.goals || s.own || s.assists || s.bot < 0)
+  const rows = r.stats.filter(s => s.goals || s.own || s.assists || s.bot < 0 || s.id === G.myId)
     .sort((a, b) => (b.goals - a.goals) || (b.assists - a.assists) || (a.team - b.team))
     .map(s => `<div class="r" style="background:color-mix(in srgb,${TEAM[s.team].c} 14%,#fff)">${avHTML(s.ch)}<span>${esc(s.name)}${s.id === G.myId ? ' (du)' : ''}</span>
-      <b>${s.goals ? '⚽'.repeat(Math.min(s.goals, 5)) + (s.goals > 5 ? '×' + s.goals : '') : ''}${s.assists ? ' 👟' + s.assists : ''}${s.own ? ' 🙈' + s.own : ''}</b></div>`).join('');
+      <b>${s.goals ? '⚽'.repeat(Math.min(s.goals, 5)) + (s.goals > 5 ? '×' + s.goals : '') : ''}${s.assists ? ' 👟' + s.assists : ''}${s.own ? ' 🙈' + s.own : ''}</b>
+      <small class="mini">${s.tackles != null ? `🛡️${s.tackles} 🎯${s.passOk}/${s.passes} 🌀${s.dribbles}` : ''}</small></div>`).join('');
+  // XP till min spelare
+  let xpHTML = '';
+  const mine = r.stats.find(s => s.id === G.myId);
+  if (mine && !G.xpGiven) {
+    G.xpGiven = true;
+    const mult = G.mode === 'local' ? [0.6, 1, 1.4][setup.lvl] * (setup.size > 1 ? 1 : 0.8) : 1.2;
+    const x = xpFor(mine, won, mult);
+    const before = PROF.get(ME.ch).lvl;
+    const res = addXp(ME.ch, x.total, mine, won);
+    if (res.ups) setTimeout(() => { SFX.levelup(); buzz(80); }, 300);
+    statsChanged();
+    xpHTML = `<div class="xpbox"><div class="xptop"><b>+${x.total} XP</b><span>${x.items.map(i => `${i[0]}`).join(' · ')}</span></div>
+      <div class="phead">${avHTML(ME.ch)}<div class="grow"><div class="lvl">Nivå ${res.p.lvl}${res.ups ? ` <span class="up">⬆️ NY NIVÅ!</span>` : ''}</div>${xpBarHTML(res.p)}</div></div>
+      ${res.p.pts ? `<button class="btn purple small" id="eStats">✨ ${res.p.pts} poäng att fördela</button>` : ''}</div>`;
+    void before;
+  }
   const head = w < 0 ? 'Oavgjort!' : (G.mode === 'local' ? (won ? 'Du vann! 🏆' : 'Datorn vann 😅') : `${TEAM[w].e} ${TEAM[w].name} vann!`);
   const btns = G.mode === 'client' ? `<p class="wait">Väntar på värden… ⏳</p><button class="btn white small" id="eLeave">🚪 Lämna</button>`
     : G.mode === 'host' ? `<button class="btn green" id="eAgain">🔁 Till laguppställningen</button><button class="btn white small" id="eLeave">🚪 Avsluta</button>`
     : `<button class="btn green" id="eAgain">🔁 Spela igen</button><button class="btn white small" id="eLeave">🏠 Meny</button>`;
   panel(`<h3>${head}</h3><div class="score-big"><span style="color:${TEAM[0].c}">${r.score[0]}</span>–<span style="color:${TEAM[1].c}">${r.score[1]}</span></div>
-    ${r.golden ? '<p>Avgjort i förlängningen ⚡</p>' : ''}<div class="res">${rows}</div>${btns}`);
+    ${r.golden ? '<p>Avgjort i förlängningen ⚡</p>' : ''}<div class="res">${rows}</div>${xpHTML}${btns}`);
+  if ($('eStats')) $('eStats').onclick = () => {
+    SFX.tap(); closePanel();
+    if (G.mode === 'local') { stopSim(); openStats('menu'); }
+    else if (G.mode === 'host') { stopSim(); HOST.inGame = false; hostLobbyBroadcast(); openStats('lobby'); }
+    else openStats('lobby');
+  };
   $('eLeave').onclick = () => { SFX.tap(); closePanel(); if (G.mode === 'local') { stopSim(); show('menu'); } else leave(); };
   if ($('eAgain')) $('eAgain').onclick = () => {
     SFX.tap(); closePanel();
@@ -288,7 +321,7 @@ async function onEnd(r) {
 const HOST = { ws: null, lobby: [], set: Object.assign({ min: 3, fill: 0, lvl: 1 }, store.get('hostset', {})), inGame: false, ok: false };
 function hostStart() {
   G.mode = 'host'; G.myId = 'h';
-  HOST.lobby = [{ id: 'h', name: myName(), ch: ME.ch, team: 0 }];
+  HOST.lobby = [{ id: 'h', name: myName(), ch: ME.ch, team: 0, st: effSt(ME.ch), lvl: PROF.get(ME.ch).lvl }];
   hostConnect();
   show('lobby');
 }
@@ -312,14 +345,16 @@ function hostRecv(d) {
   let m; try { m = JSON.parse(d.slice(bar + 1)); } catch (e) { return; }
   if (m.t === 'in') { if (G.sim && HOST.inGame) G.sim.input(id, +m.x || 0, +m.y || 0, m.k | 0, m.p | 0); return; }
   if (m.t === 'hi') {
-    const name = String(m.name || 'Spelare').slice(0, 14), ch = (m.ch | 0) % 4;
+    const name = String(m.name || 'Spelare').slice(0, 14), ch = Math.abs(m.ch | 0) % 4;
+    const st = {}; for (const k of SIM.STATS) st[k] = Math.max(0, Math.min(SIM.STMAX, +((m.st || {})[k]) || 0));
+    const lvl = Math.max(1, Math.min(LVL_MAX, m.lvl | 0));
     let p = HOST.lobby.find(p => p.id === id);
     if (!p) {
       const cnt = t => HOST.lobby.filter(p => p.team === t).length;
-      p = { id, name, ch, team: cnt(0) <= cnt(1) ? 0 : 1 };
+      p = { id, name, ch, team: cnt(0) <= cnt(1) ? 0 : 1, st, lvl };
       HOST.lobby.push(p);
       SFX.pick(); buzz(15);
-    } else { p.name = name; p.ch = ch; }
+    } else { Object.assign(p, { name, ch, st, lvl }); if (HOST.inGame && G.sim && G.sim.byId(id)) { G.sim.setStats(G.sim.byId(id), st); return hostLobbyBroadcast(); } }
     hostTo(id, { t: 'welcome', id });
     if (HOST.inGame && G.sim) hostJoinMid(p);
     hostLobbyBroadcast();
@@ -346,8 +381,8 @@ function hostJoinMid(p) {
   const team = humans(0) <= humans(1) ? 0 : 1;
   p.team = team;
   let q = m.players.find(q => q.team === team && q.bot >= 0) || m.players.find(q => q.bot >= 0);
-  if (q) { p.team = q.team; Object.assign(q, { id: p.id, name: p.name, ch: p.ch, bot: -1, kSeq: 0, pSeq: 0, ix: 0, iy: 0 }); }
-  else m.add({ id: p.id, name: p.name, ch: p.ch, team, bot: -1 });
+  if (q) { p.team = q.team; Object.assign(q, { id: p.id, name: p.name, ch: p.ch, bot: -1, kSeq: 0, pSeq: 0, ix: 0, iy: 0 }); m.setStats(q, p.st); }
+  else m.add({ id: p.id, name: p.name, ch: p.ch, team, bot: -1, st: p.st });
   hostRoster();
 }
 let rv = 0;
@@ -361,7 +396,8 @@ function hostLobbyBroadcast() {
 }
 function hostStartMatch() {
   const set = HOST.set;
-  const pl = HOST.lobby.map(p => ({ id: p.id, name: p.name, ch: p.ch, team: p.team, bot: -1 }));
+  const me = HOST.lobby.find(p => p.id === 'h'); if (me) me.st = effSt(ME.ch);
+  const pl = HOST.lobby.map(p => ({ id: p.id, name: p.name, ch: p.ch, team: p.team, bot: -1, st: p.st }));
   for (const t of [0, 1]) if (!pl.some(p => p.team === t) && pl.length > 1 && !set.fill) {   // ett tomt lag: flytta någon
     const other = pl.filter(p => p.team !== t); other[other.length - 1].team = t;
   }
@@ -387,7 +423,7 @@ function clientConnect() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
   CL.ws = ws;
   panel(`<h3>Ansluter… <span class="spin">⚽</span></h3><p>Till matchen på ${esc(location.hostname)}</p>`);
-  ws.onopen = () => { CL.tries = 0; closePanel(); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch })); show('lobby'); };
+  ws.onopen = () => { CL.tries = 0; closePanel(); sendHi(); show('lobby'); };
   ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (er) { return; } clientRecv(m); };
   ws.onclose = () => {
     if (CL.ws !== ws || CL.closing) return;
@@ -399,17 +435,25 @@ function clientConnect() {
     $('pLeave').onclick = () => { SFX.tap(); leave(); };
   };
 }
+function sendHi() {
+  if (CL.ws && CL.ws.readyState === 1) CL.ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch, st: effSt(ME.ch), lvl: PROF.get(ME.ch).lvl }));
+}
+/* poäng fördelade på "Min spelare" */
+function statsChanged() {
+  if (G.mode === 'client') sendHi();
+  if (G.mode === 'host') { const me = HOST.lobby.find(p => p.id === 'h'); if (me) { me.st = effSt(ME.ch); me.lvl = PROF.get(ME.ch).lvl; hostLobbyBroadcast(); } }
+}
 function clientRecv(m) {
   switch (m.t) {
     case 'welcome': CL.id = m.id; G.myId = m.id; break;
     case 'lobby':
       CL.lobby = m;
-      if (!m.inGame && (current === 'game' || G.over)) { clearInterval(CL.sendT); closePanel(); G.over = false; show('lobby'); }
+      if (!m.inGame && (current === 'game' || G.over)) { clearInterval(CL.sendT); closePanel(); G.over = false; if (current !== 'stats') show('lobby'); else statsBack = 'lobby'; }
       else if (current === 'lobby') buildLobby();
       break;
     case 'roster':
       G.roster = m.players; G.rv = m.rv;
-      if (current !== 'game') { G.snaps = []; G.over = false; closePanel(); show('game'); SFX.whistle(1); }
+      if (current !== 'game') { G.snaps = []; G.over = false; G.xpGiven = false; closePanel(); show('game'); SFX.whistle(1); }
       clearInterval(CL.sendT);
       CL.sendT = setInterval(clientSendInput, 33);
       break;
@@ -445,7 +489,7 @@ function buildLobby() {
   if (current !== 'lobby') return;
   const L = lobbyData(), isHost = G.mode === 'host';
   const myId = isHost ? 'h' : CL.id;
-  const plHTML = p => `<button class="pl ${p.id === myId ? 'mine' : ''}" data-id="${esc(p.id)}">${avHTML(p.ch)}<span>${esc(p.name)}${p.id === myId ? ' <small>(du)</small>' : ''}${p.id === 'h' ? ' <small>👑</small>' : ''}</span></button>`;
+  const plHTML = p => `<button class="pl ${p.id === myId ? 'mine' : ''}" data-id="${esc(p.id)}">${avHTML(p.ch)}<span>${esc(p.name)}${p.id === myId ? ' <small>(du)</small>' : ''}${p.id === 'h' ? ' <small>👑</small>' : ''}<br><small class="lvtag">Nivå ${p.lvl || 1}</small></span></button>`;
   const fill = L.set.fill || 0;
   const team = t => {
     const ps = L.players.filter(p => p.team === t);
@@ -477,7 +521,9 @@ function buildLobby() {
       <div class="teams">${team(0)}${team(1)}</div>
       <p class="note" style="text-align:center">${isHost ? 'Tryck på en spelare för att byta lag.' : 'Tryck på dig själv för att byta lag.'}</p>
       ${isHost ? `<button class="btn green" id="lStart" style="align-self:center" ${HOST.ok ? '' : 'disabled'}>⚽ Starta matchen!</button>` : ''}
+      <button class="btn purple small" id="lStats" style="align-self:center">🏋️ Min spelare</button>
     </div><div style="display:flex;flex-direction:column;gap:12px">${side}</div>`;
+  $('lStats').onclick = () => { SFX.tap(); openStats('lobby'); };
   $('lobbyBox').querySelectorAll('.pl[data-id]').forEach(b => b.onclick = () => {
     const id = b.dataset.id;
     if (isHost) { const p = HOST.lobby.find(p => p.id === id); if (p) { p.team = 1 - p.team; SFX.tap(); hostLobbyBroadcast(); } }
@@ -811,6 +857,7 @@ function drawBall(b) {
 
 /* ================= START ================= */
 document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { SFX.tap(); show('menu'); });
+$('toStats').onclick = () => { SFX.tap(); openStats('menu'); };
 $('toSetup').onclick = () => { SFX.tap(); show('setup'); };
 $('toJoin').onclick = () => { SFX.tap(); show('join'); };
 $('toHost').onclick = () => { SFX.tap(); startHosting(); };

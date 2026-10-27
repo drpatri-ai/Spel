@@ -20,8 +20,10 @@ const GAMES = [
   { id: 'krock', title: 'Krockarenan', sub: 'Bygg en stridsbil – krocka mot familjen', icon: '💥', c: '#8B5BFF', d: '#6235D9',
     stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('krock') || 'null') : makeStore('bk').get('prof', null); } catch (e) { } return p && p.lad ? `⚔️ ${p.lad} segrar i arenan` : ''; } },
   { id: 'stad', title: 'Staden', sub: 'Lek med familjen hemma, i parken och i affären', icon: '🏙️', c: '#14C8C8', d: '#0E9A9A', stat: () => '' },
-  { id: 'studs', title: 'Studs', sub: 'Sikta, studsa och träffa alla orange pinnar', icon: '🎯', c: '#FF7A12', d: '#D95A00', isNew: true,
-    stat: () => { const c = Object.keys(makeStore('bu').get('cleared', {})).length; return c ? `⭐ ${c} banor klara` : ''; } }
+  { id: 'studs', title: 'Studs', sub: 'Sikta, studsa och träffa alla orange pinnar', icon: '🎯', c: '#FF7A12', d: '#D95A00',
+    stat: () => { const c = Object.keys(makeStore('bu').get('cleared', {})).length; return c ? `⭐ ${c} banor klara` : ''; } },
+  { id: 'box', title: 'Boxning', sub: 'Familjen i ringen – mästerskap, två spelare och wifi', icon: '🥊', c: '#E53935', d: '#9E1B1B', isNew: true,
+    stat: () => { const b = makeStore('bx').get('belts', {}); const n = Object.values(b).reduce((a, v) => a + v, 0); return n ? `🏆 ${n} mästarbälten` : ''; } }
 ];
 
 let current = 'hub';

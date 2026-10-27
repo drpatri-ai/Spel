@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Boxning</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#7A1020">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(170deg,#FF5A4D 0%,#C2185B 45%,#3A1460 100%)}
+.hidden{display:none!important}
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:8px 14px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:58px}
+.me b{font-size:19px}
+.me small{display:block;color:var(--muted)}
+.belt{display:inline-flex;align-items:center;gap:4px;background:#2B2350;color:#FFD23F;border-radius:10px;padding:2px 9px;font-weight:700;font-size:14px;white-space:nowrap}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #menu{flex-direction:row;gap:26px}
+  #menu .logo .l1{font-size:42px}#menu .logo .l2{font-size:34px}
+  #menu .menu .btn{padding:9px 18px}
+}
+#menu .menu{gap:10px}
+.row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.row2 .btn{min-width:0;flex:1}
+.sts{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;font-size:12px;font-weight:600}
+.sts span{background:#F0EDFF;border-radius:8px;padding:1px 6px;white-space:nowrap}
+.char{position:relative}
+.char .num{position:absolute;top:4px;right:6px;background:#FFD23F;border-radius:50%;width:26px;height:26px;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:15px;box-shadow:0 2px 0 #C99600}
+
+.wrap{width:min(96vw,1000px);display:flex;flex-direction:column;gap:12px;margin-top:64px;padding-bottom:20px}
+.card{background:var(--card);border-radius:22px;padding:12px 14px;box-shadow:0 5px 0 #C9C3E8;display:flex;flex-direction:column;gap:8px}
+.card h4{margin:0;font-size:18px}
+.note{color:var(--muted);font-size:15px;margin:0;line-height:1.35}
+
+/* mästerskapet */
+.ladder{display:flex;flex-direction:column;gap:8px}
+.rung{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:18px;padding:8px 12px;box-shadow:0 4px 0 #C9C3E8}
+.rung .no{font-weight:700;font-size:18px;width:30px;text-align:center;color:var(--muted)}
+.rung .av{width:50px;border-width:3px}
+.rung .grow{flex:1;min-width:0}
+.rung small{display:block;color:var(--muted);font-size:13px}
+.rung.done{opacity:.6}
+.rung.next{box-shadow:0 4px 0 #219A40,0 0 0 3px #34C759}
+.rung.locked{filter:grayscale(.7);opacity:.55}
+.av.mini{width:64px;flex:none}
+.rung.boss{background:linear-gradient(90deg,#FFF3C4,#fff)}
+.rung .btn{min-width:0;padding:8px 14px;font-size:15px;border-radius:14px}
+.diff{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.diff button{padding:8px 16px;border-radius:14px;background:#ffffffcc;font-weight:700;font-size:16px;box-shadow:0 3px 0 #C9C3E8}
+.diff button.on{background:#2B2350;color:#fff}
+
+/* lobby */
+.plist{display:flex;flex-direction:column;gap:8px}
+.pl{display:flex;align-items:center;gap:10px;background:#F6F4FF;border-radius:16px;padding:6px 10px;font-weight:600}
+.pl .av{width:42px;border-width:3px}
+.pl span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl.mine{box-shadow:0 0 0 3px #FFD23F}
+.pl .q{flex:none;font-size:13px;background:#2B2350;color:#fff;border-radius:8px;padding:1px 7px}
+.joininfo{display:flex;gap:12px;align-items:center}
+.qr{background:#fff;border-radius:14px;padding:6px;flex:none;line-height:0}
+.qr svg{width:min(34vw,150px);height:auto}
+.url{font-weight:700;font-size:clamp(17px,4.2vmin,24px);white-space:nowrap}
+.ipbox{display:flex;gap:8px}
+.ipbox input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:600;border:3px solid #E4E0F7;border-radius:14px;padding:8px 12px;color:var(--ink);-webkit-user-select:text;user-select:text}
+.found{display:flex;flex-direction:column;gap:10px}
+.found .btn{min-width:0;width:100%}
+.spin{display:inline-block;animation:spin2 1s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+.gar{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-aspect-ratio:5/4){.gar{grid-template-columns:1.15fr 1fr;align-items:start}}
+.vsline{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:20px}
+.vsline .av{width:54px}
+
+/* matchen */
+#fight{padding:0;gap:0;background:#1A0F2E;justify-content:flex-start}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:flex-start;gap:8px;z-index:3;pointer-events:none}
+.hud .ibtn{pointer-events:auto;flex:none;width:42px;height:42px;font-size:20px}
+.fighter{flex:1;display:flex;align-items:center;gap:6px;min-width:0}
+.fighter.r{flex-direction:row-reverse;text-align:right}
+.fighter .av{width:clamp(40px,10vmin,60px);border-width:3px}
+.fighter .info{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.fighter b{color:#fff;font-size:clamp(13px,3.4vmin,18px);text-shadow:0 2px 0 #0008;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:clamp(12px,3vmin,18px);border-radius:9px;background:#0007;overflow:hidden;border:2px solid #fff;position:relative}
+.bar i{position:absolute;top:0;bottom:0;left:0;background:linear-gradient(90deg,#FF4D6D,#FFD23F 45%,#34C759);transition:width .12s}
+.fighter.r .bar i{left:auto;right:0}
+.bar.sta{height:7px;border-width:1px}
+.bar.sta i{background:#4FC3FF}
+.sup{display:flex;align-items:center;gap:4px;color:#FFD23F;font-weight:700;font-size:13px;text-shadow:0 1px 0 #000}
+.fighter.r .sup{flex-direction:row-reverse}
+.sup .bar{flex:1;height:8px;border-width:1px}
+.sup .bar i{background:linear-gradient(90deg,#FFB300,#FFF176)}
+.sup.full .bar i{background:linear-gradient(90deg,#FF4D6D,#FFD23F,#34C759,#3B9DFF,#B45CFF)}
+.kds{font-size:12px;letter-spacing:-2px}
+.clock{background:#fffe;border-radius:14px;padding:3px 10px;font-weight:700;font-size:clamp(16px,4.2vmin,24px);min-width:56px;text-align:center;box-shadow:0 3px 0 #0004;line-height:1.1}
+.clock small{display:block;font-size:.55em;color:var(--muted)}
+
+.pad{position:absolute;bottom:var(--safe-b);z-index:3;display:grid;gap:8px;touch-action:none;-webkit-user-select:none;user-select:none}
+.pad button{width:var(--bs);height:var(--bs);border-radius:50%;background:#ffffffdd;box-shadow:0 4px 0 #0005;font-size:calc(var(--bs) * .42);display:grid;place-items:center;line-height:1;touch-action:none;position:relative}
+.pad button small{position:absolute;bottom:-1px;left:0;right:0;font-size:11px;font-weight:700;color:#fff;text-shadow:0 1px 0 #000,0 0 3px #000}
+.pad button.on{transform:translateY(3px) scale(.95);box-shadow:0 1px 0 #0005;background:#FFD23F}
+.pad button.supb{background:#ffffff66}
+.pad button.supb.ready{background:radial-gradient(#FFF176,#FFB300);animation:glow 0.8s ease-in-out infinite alternate}
+@keyframes glow{to{box-shadow:0 0 18px 6px #FFD23F,0 4px 0 #0005}}
+.pad.mv{left:var(--safe-l);grid-template-columns:repeat(2,var(--bs))}
+.pad.at{right:var(--safe-r);grid-template-columns:repeat(2,var(--bs))}
+.pad.p2.mv{left:auto;right:calc(var(--safe-r) + 2 * var(--bs) + 26px)}
+.pad.p1.at{right:auto;left:calc(var(--safe-l) + 2 * var(--bs) + 26px)}
+.pad .lbl{grid-column:1/-1;text-align:center;color:#fff;font-weight:700;font-size:13px;text-shadow:0 1px 0 #000}
+.bigtxt{position:absolute;left:0;right:0;top:30%;text-align:center;font-weight:700;color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;
+  text-shadow:0 6px 0 var(--ink);pointer-events:none;z-index:4;font-size:clamp(40px,13vmin,110px);line-height:1.05}
+.bigtxt small{display:block;font-size:.4em;-webkit-text-stroke:3px var(--ink)}
+.bigtxt.pop{animation:pop2 .45s cubic-bezier(.2,1.8,.4,1)}
+@keyframes pop2{from{transform:scale(.2);opacity:0}}
+.getup{position:absolute;left:50%;top:52%;transform:translateX(-50%);z-index:4;background:#000a;border-radius:16px;padding:8px 14px;color:#fff;font-weight:700;text-align:center;width:min(80vw,360px);pointer-events:none}
+.getup .bar{margin-top:6px;height:16px}
+.getup .bar i{background:linear-gradient(90deg,#34C759,#FFD23F)}
+.turn{position:absolute;inset:0;z-index:6;background:#1A0F2Eee;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:22px;text-align:center;padding:20px}
+.turn .big{font-size:70px;animation:rot 1.6s ease-in-out infinite}
+@keyframes rot{50%{transform:rotate(90deg)}}
+.rank{display:flex;flex-direction:column;gap:6px;width:100%}
+.stt{width:100%;border-collapse:collapse;font-size:15px}
+.stt td{padding:3px 6px;text-align:center}
+.stt td:nth-child(2){color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+    <button class="me" id="meCard"></button>
+    <div class="menu">
+      <button class="btn green" id="toLadder">🏆 Mästerskapet</button>
+      <button class="btn blue small" id="toQuick">🥊 Snabbmatch mot datorn</button>
+      <button class="btn pink small" id="toDuo">👫 Två spelare (samma skärm)</button>
+      <div class="row2">
+        <button class="btn small hidden" id="toHost">📡 Starta nätverksmatch</button>
+        <button class="btn white small" id="toJoin">🔗 Gå med</button>
+      </div>
+      <div class="row2">
+        <button class="btn white small" id="toHelp">❓ Så boxas man</button>
+        <button class="btn white small" id="toHub">🏠 Alla spel</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="meScr" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="meBack">⬅️</button><span></span></div>
+  <h2 style="margin-top:58px" id="meTitle">Vem boxas?</h2>
+  <p class="hint-txt" id="meSub">Alla har olika snabbhet, styrka och kondition</p>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="ladder" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Mästerskapet 🏆</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="ladBox" style="max-width:640px"></div>
+</section>
+
+<section id="quick" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><span></span></div>
+  <h2 style="margin-top:58px">Vem vill du möta? 🥊</h2>
+  <div class="diff" id="diff"></div>
+  <div class="chars" id="qChars"></div>
+</section>
+
+<section id="duo" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><span></span></div>
+  <h2 style="margin-top:58px" id="duoTitle">Röd hörna – vem boxas?</h2>
+  <p class="hint-txt">Spelas med skärmen liggande – var och en har sina knappar på sin sida</p>
+  <div class="chars" id="duoChars"></div>
+</section>
+
+<section id="join" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Gå med 🔗</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="joinBox" style="max-width:560px"></div>
+</section>
+
+<section id="lobby" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="lobbyBack">⬅️</button><h2>Boxningsgala 🥊</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="lobbyBox"></div>
+</section>
+
+<section id="fight" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <button class="ibtn" id="fBack">⏸️</button>
+    <div class="fighter" id="f0"></div>
+    <div class="clock" id="clock">60</div>
+    <div class="fighter r" id="f1"></div>
+  </div>
+  <div id="pads"></div>
+  <div class="getup hidden" id="getup">Tryck snabbt på slagknapparna för att resa dig! 👊<div class="bar"><i id="guBar"></i></div></div>
+  <div class="bigtxt hidden" id="big"></div>
+  <div class="turn hidden" id="turn"><div class="big">📱</div>Vänd skärmen till liggande för två spelare</div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="boll/qrcode.js"></script>
+<script src="box/sim.js"></script>
+<script src="box/app.js"></script>
+</body>
+</html>

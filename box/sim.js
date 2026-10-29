@@ -20,7 +20,8 @@
     { spd: 2, pow: 4, sta: 3, tag: 'Tung högerhand' },    // Besnik
     { spd: 3, pow: 4, sta: 2, tag: 'Hård och snabb' },    // Saranda
     { spd: 2, pow: 3, sta: 4, tag: 'Seg som läder' },     // Gjyshja
-    { spd: 2, pow: 2, sta: 5, tag: 'Rutinerad veteran' }  // Gjyshi
+    { spd: 2, pow: 2, sta: 5, tag: 'Rutinerad veteran' }, // Gjyshi
+    { spd: 2, pow: 3, sta: 4, tag: 'Mormorsstyrka' }      // Mormor
   ];
   const statsOf = ch => STATS[((ch | 0) % STATS.length + STATS.length) % STATS.length];
 
@@ -35,12 +36,17 @@
   function RNG(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ t >>> 15, t | 1); t ^= t + Math.imul(t ^ t >>> 7, t | 61); return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 
+  // uppgraderingar (0–5 vardera) från träningen
+  const UPG_KEYS = ['spd', 'pow', 'sta', 'chin', 'rec', 'sup'];
+  const cleanUp = u => { const o = {}; for (const k of UPG_KEYS) o[k] = Math.max(0, Math.min(5, (u && u[k]) | 0)); return o; };
+  const botUp = lv => { const n = Math.max(0, Math.min(5, Math.floor((lv | 0) / 2))); const o = {}; for (const k of UPG_KEYS) o[k] = n; return o; };
   function boxer(o, side) {
-    const s = statsOf(o.ch);
-    const maxhp = 100 + (s.sta - 3) * 8, maxsta = 100 + (s.sta - 3) * 10;
+    const s0 = statsOf(o.ch), u = cleanUp(o.up);
+    const s = { spd: s0.spd + u.spd * .25, pow: s0.pow + u.pow * .25, sta: s0.sta + u.sta * .25 };
+    const maxhp = Math.round(100 + (s.sta - 3) * 8), maxsta = Math.round(100 + (s.sta - 3) * 10);
     return {
       ch: o.ch | 0, name: o.name || '', bot: o.bot == null ? -1 : o.bot, side,
-      spd: s.spd, pow: s.pow, stam: s.sta,
+      spd: s.spd, pow: s.pow, stam: s.sta, chin: 1 - u.chin * .05, rec: 1 + u.rec * .12, supK: 1 + u.sup * .12, up: u,
       x: side ? 210 : -210, face: side ? -1 : 1,
       hp: maxhp, maxhp, sta: maxsta, maxsta, sup: 0,
       st: 'idle', mv: null, ph: '', t: 0, stun: 0, kd: 0, getup: 0, upAt: 99,
@@ -107,7 +113,7 @@
       b.t += dt;
       b.hitT = Math.max(0, b.hitT - dt);
       // ork
-      if (b.st !== 'atk') b.sta = Math.min(b.maxsta, b.sta + (10 + b.stam * 2.5) * dt * (b.st === 'block' ? .5 : 1));
+      if (b.st !== 'atk') b.sta = Math.min(b.maxsta, b.sta + (10 + b.stam * 2.5) * b.rec * dt * (b.st === 'block' ? .5 : 1));
       // buffra slag som trycks medan man är upptagen
       const pr = b.press & ATK; b.press = 0;
       if (pr) { for (const k of [K.SUPER, K.UPPER, K.HOOK, K.JAB]) if (pr & k) { b.buf = MOVE_OF[k]; b.bufT = .22; break; } }
@@ -147,8 +153,8 @@
       const a = this.B[i], d = this.B[1 - i], m = MOVES[a.mv];
       const dist = Math.abs(d.x - a.x);
       if (dist > m.reach || d.st === 'down') { this.emit('miss', { i, m: a.mv }); return; }
-      if (d.st === 'duck' && m.hi) { this.emit('dodge', { i: 1 - i, m: a.mv }); d.sup = Math.min(100, d.sup + 6); return; }
-      let dmg = m.dmg * (0.78 + a.pow * 0.11) * (a.sta < 15 ? .6 : 1);
+      if (d.st === 'duck' && m.hi) { this.emit('dodge', { i: 1 - i, m: a.mv }); d.sup = Math.min(100, d.sup + 6 * d.supK); return; }
+      let dmg = m.dmg * (0.78 + a.pow * 0.11) * (a.sta < 15 ? .6 : 1) * d.chin;
       let kind = 'hit';
       const counter = d.st === 'atk' && d.ph === 'wind';
       if (counter) { dmg *= 1.4; kind = 'counter'; d.st = 'stun'; d.mv = null; }
@@ -158,7 +164,7 @@
         d.sta = Math.max(0, d.sta - (a.mv === 'jab' ? 4 : a.mv === 'hook' ? 9 : 14));
         dmg *= thru; d.x += a.face * m.kb * .4; d.blocked++;
         if (a.mv === 'upper' || a.mv === 'super' || d.sta <= 0) { d.st = 'stun'; d.stun = .25; d.t = 0; this.emit('guardbreak', { i: 1 - i }); }
-        a.sup = Math.min(100, a.sup + 2);
+        a.sup = Math.min(100, a.sup + 2 * a.supK);
         if (dmg > 0) { d.hp -= dmg; a.dmg += dmg; }
         this.emit('block', { i: 1 - i, m: a.mv, x: Math.round(d.x - a.face * 40) });
         if (d.hp <= 0) this.knockdown(1 - i, a.mv);
@@ -166,8 +172,8 @@
       }
       dmg = Math.round(dmg * 10) / 10;
       d.hp -= dmg; a.dmg += dmg; a.landed++;
-      a.sup = Math.min(100, a.sup + (a.mv === 'super' ? 0 : 7 + dmg * .8));
-      d.sup = Math.min(100, d.sup + 2);
+      a.sup = Math.min(100, a.sup + (a.mv === 'super' ? 0 : (7 + dmg * .8) * a.supK));
+      d.sup = Math.min(100, d.sup + 2 * d.supK);
       d.x += a.face * m.kb * (counter ? 1.3 : 1);
       if (d.st !== 'down') { d.st = 'stun'; d.stun = m.stun * (counter ? 1.3 : 1); d.t = 0; d.mv = null; }
       d.hitT = .25; d.lastHit = a.mv;
@@ -196,7 +202,7 @@
       }
       // resa sig: spelaren trycker snabbt, datorn vid sin räkning
       const pr = d.press & ATK; d.press = 0; a.press = 0;
-      if (d.bot < 0 && pr && d.kd < 3 && this.count >= 1) d.getup += 100 / (5 + d.kd * 3.5);
+      if (d.bot < 0 && pr && d.kd < 3 && this.count >= 1) d.getup += 100 / (5 + d.kd * 3.5) * d.rec;
       d.getup = Math.max(0, d.getup - dt * (8 + d.kd * 4));
       if ((d.bot >= 0 && this.count >= d.upAt) || (d.bot < 0 && d.getup >= 100)) {
         d.st = 'idle'; d.t = 0; d.hp = Math.round(d.maxhp * Math.max(.2, .55 - d.kd * .12));
@@ -289,6 +295,6 @@
     result() { return { winner: this.winner, how: this.how, rounds: this.round, b: this.B.map(b => ({ ch: b.ch, name: b.name, dmg: Math.round(b.dmg), landed: b.landed, thrown: b.thrown, kd: b.kd, blocked: b.blocked })) }; }
   }
 
-  const BX = { DT, RING, K, ATK, MOVES, STATS, statsOf, Fight, RNG };
+  const BX = { DT, RING, K, ATK, MOVES, STATS, statsOf, Fight, RNG, UPG_KEYS, cleanUp, botUp };
   if (typeof module !== 'undefined' && module.exports) module.exports = BX; else root.BX = BX;
 })(this);

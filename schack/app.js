@@ -8,7 +8,7 @@ const store = makeStore('bs');
 
 /* ---------- figurer & teman ---------- */
 // pjäsernas konturfärger (lite mörkare än figurfärgen)
-const PIECE_D = ['#1E7F38', '#B8501A', '#4E3FC4', '#C23A7A', '#A87A00', '#0B7C7C', '#A82A22', '#1C5FA8', '#6E4220', '#3C465C'];
+const PIECE_D = ['#1E7F38', '#B8501A', '#4E3FC4', '#C23A7A', '#A87A00', '#0B7C7C', '#A82A22', '#1C5FA8', '#6E4220', '#3C465C', '#8A2E8A'];
 const THEMES = [
   { name: 'Hav', light: '#FFF4DA', dark: '#8FB8FF', frame: '#2A4FC4' },
   { name: 'Skog', light: '#F6FAE6', dark: '#9CCB8E', frame: '#2E7D4F' },

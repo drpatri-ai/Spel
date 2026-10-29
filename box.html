@@ -125,6 +125,20 @@ body{background:linear-gradient(170deg,#FF5A4D 0%,#C2185B 45%,#3A1460 100%)}
 .turn{position:absolute;inset:0;z-index:6;background:#1A0F2Eee;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-weight:700;font-size:22px;text-align:center;padding:20px}
 .turn .big{font-size:70px;animation:rot 1.6s ease-in-out infinite}
 @keyframes rot{50%{transform:rotate(90deg)}}
+.xpbar{position:relative;height:20px;border-radius:10px;background:#E4E0F7;overflow:hidden;margin-top:4px}
+.xpbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#8B7BFF,#34C759)}
+.xpbar span{position:relative;display:block;text-align:center;font-weight:700;font-size:13px;line-height:20px}
+.xpbox{display:flex;flex-direction:column;gap:6px;width:100%}
+.xpl{display:flex;align-items:center;gap:8px;background:#F6F4FF;border-radius:14px;padding:6px 10px;text-align:left}
+.xpl .av{width:42px;border-width:3px;flex:none}
+.lvup{background:#FFD23F;border-radius:8px;padding:1px 7px;font-weight:700;font-size:13px}
+.upl{display:flex;flex-direction:column;gap:8px}
+.upr{display:flex;align-items:center;gap:10px;background:#F6F4FF;border-radius:16px;padding:8px 10px}
+.upr .ic{font-size:26px;width:34px;text-align:center}
+.upr .grow{flex:1;min-width:0}
+.upr small{display:block;color:var(--muted);font-size:12px}
+.upr .pips{color:#8B7BFF;letter-spacing:1px;font-size:14px}
+.upr .btn{min-width:0;width:48px;padding:6px 0;font-size:22px;flex:none}
 .rank{display:flex;flex-direction:column;gap:6px;width:100%}
 .stt{width:100%;border-collapse:collapse;font-size:15px}
 .stt td{padding:3px 6px;text-align:center}
@@ -147,6 +161,7 @@ body{background:linear-gradient(170deg,#FF5A4D 0%,#C2185B 45%,#3A1460 100%)}
         <button class="btn white small" id="toJoin">🔗 Gå med</button>
       </div>
       <div class="row2">
+        <button class="btn purple small" id="toTrain">🏋️ Träning</button>
         <button class="btn white small" id="toHelp">❓ Så boxas man</button>
         <button class="btn white small" id="toHub">🏠 Alla spel</button>
       </div>
@@ -164,6 +179,11 @@ body{background:linear-gradient(170deg,#FF5A4D 0%,#C2185B 45%,#3A1460 100%)}
 <section id="ladder" class="screen scroll">
   <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Mästerskapet 🏆</h2><span style="width:48px"></span></div>
   <div class="wrap" id="ladBox" style="max-width:640px"></div>
+</section>
+
+<section id="train" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Träning 🏋️</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="trBox" style="max-width:640px"></div>
 </section>
 
 <section id="quick" class="screen scroll">

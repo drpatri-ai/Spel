@@ -31,7 +31,8 @@ const CHARS = [
   { name: 'Besnik', c: '#FF5A4D', d: '#C9382E', img: 'avatars/7.jpg', full: 'avatars/full7.webp' },
   { name: 'Saranda', c: '#3B9DFF', d: '#2373C9', img: 'avatars/8.jpg', full: 'avatars/full8.webp' },
   { name: 'Gjyshja', c: '#B5713A', d: '#8A5226', img: 'avatars/9.jpg', full: 'avatars/full9.webp' },
-  { name: 'Gjyshi', c: '#6B7A99', d: '#4E5A73', img: 'avatars/10.jpg', full: 'avatars/full10.webp' }
+  { name: 'Gjyshi', c: '#6B7A99', d: '#4E5A73', img: 'avatars/10.jpg', full: 'avatars/full10.webp' },
+  { name: 'Mormor', c: '#D16BD8', d: '#A0409F', img: 'avatars/11.jpg', full: 'avatars/full11.webp' }
 ];
 const charName = i => shared.get('name' + i, CHARS[i].name) || CHARS[i].name;
 const avatarSrc = i => shared.get('img' + i, null) || CHARS[i].img;

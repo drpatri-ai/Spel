@@ -20,7 +20,8 @@ const ST_BASE = [
   { sho: 3 },            // Besnik
   { tck: 3 },            // Saranda
   { pas: 2, tck: 1 },    // Gjyshja
-  { tck: 2, sho: 1 }     // Gjyshi
+  { tck: 2, sho: 1 },    // Gjyshi
+  { pas: 2, spd: 1 }     // Mormor
 ];
 const PT_MAX = 20;          // max poäng man själv lägger på en egenskap
 const LVL_MAX = 60;

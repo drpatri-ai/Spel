@@ -16,7 +16,8 @@ const PAF_CHAR = [
   { base: { kick: 8, strong: 20 }, rig: { neck: 0.26, hip: 0.6, legAmp: 0.95 } },    // Besnik
   { base: { luck: 20, kick: 4 }, rig: { neck: 0.23, hip: 0.62, legAmp: 0.8 } },      // Saranda
   { base: { strong: 30, luck: 6 }, rig: { neck: 0.24, hip: 0.62, legAmp: 0.35 } },  // Gjyshja
-  { base: { kick: 12, strong: 10 }, rig: { neck: 0.22, hip: 0.6, legAmp: 0.8 } }     // Gjyshi
+  { base: { kick: 12, strong: 10 }, rig: { neck: 0.22, hip: 0.6, legAmp: 0.8 } },    // Gjyshi
+  { base: { luck: 18, strong: 12 }, rig: { neck: 0.22, hip: 0.62, legAmp: 0.35 } }   // Mormor
 ];
 CHARS.forEach((c, i) => Object.assign(c, PAF_CHAR[i]));
 

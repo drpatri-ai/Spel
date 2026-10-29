@@ -8,7 +8,8 @@ const CFG = [
   { H: 330, hx: 0.49, ey: 0.13, kg: 32 }, { H: 340, hx: 0.48, ey: 0.15, kg: 35 }, { H: 430, hx: 0.39, ey: 0.14, kg: 82 },
   { H: 410, hx: 0.39, ey: 0.13, kg: 60 }, { H: 300, hx: 0.42, ey: 0.17, kg: 25 }, { H: 330, hx: 0.45, ey: 0.17, kg: 40 },
   { H: 425, hx: 0.43, ey: 0.17, kg: 85 }, { H: 400, hx: 0.5, ey: 0.17, kg: 62 }, { H: 395, hx: 0.48, ey: 0.17, kg: 70 },
-  { H: 420, hx: 0.46, ey: 0.15, kg: 80 }
+  { H: 420, hx: 0.46, ey: 0.15, kg: 80 },
+  { H: 385, hx: 0.475, ey: 0.12, kg: 72 }
 ];
 const cfgOf = i => CFG[i] || { H: 400, hx: 0.5, ey: 0.15, kg: 60 };
 const IMG = CHARS.map((_, i) => { const im = new Image(); im.src = fullOf(i).src; return im; });

@@ -40,9 +40,47 @@ const stHTML = ch => { const s = BX.statsOf(ch); return `<div class="sts"><span>
 let prog = store.get('prog', {});          // prog[ch] = antal besegrade i mästerskapet
 let belts = store.get('belts', {});        // belts[ch] = antal vunna mästerskap
 const saveProg = () => { store.set('prog', prog); store.set('belts', belts); };
-const LADDER_ORDER = [9, 8, 4, 0, 3, 7, 5, 1, 6, 2];
-const LADDER_LV = [1, 2, 3, 4, 5, 6, 7, 8, 10];
-const ladderOf = ch => LADDER_ORDER.filter(c => c !== ch % CHARS.length && c < CHARS.length).slice(0, 9);
+const LADDER_ORDER = [9, 10, 8, 4, 0, 3, 7, 5, 1, 6, 2];
+const LADDER_LV = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const ladderOf = ch => LADDER_ORDER.filter(c => c !== ch % CHARS.length && c < CHARS.length).slice(0, LADDER_LV.length);
+
+/* ---------- XP och uppgraderingar (per figur, följer med via appens profil) ---------- */
+const UPG = [
+  { k: 'spd', ic: '⚡', n: 'Snabbhet', d: 'Snabbare slag och fötter' },
+  { k: 'pow', ic: '💪', n: 'Styrka', d: 'Hårdare slag' },
+  { k: 'sta', ic: '❤️', n: 'Kondition', d: 'Mer liv och mer ork' },
+  { k: 'chin', ic: '🪨', n: 'Hård haka', d: 'Tål mer stryk' },
+  { k: 'rec', ic: '🔋', n: 'Återhämtning', d: 'Orken kommer tillbaka fortare – lättare att resa sig' },
+  { k: 'sup', ic: '⭐', n: 'Superladdning', d: 'Stjärnmätaren fylls snabbare' }
+];
+const UPG_MAX = 5, LVL_MAX = 1 + UPG.length * UPG_MAX;
+const xpNeed = l => 80 + l * 30;
+const PROF = {
+  get() {
+    let raw = null;
+    try { if (window.Android && Android.profGet) raw = Android.profGet('box') || null; } catch (e) { }
+    let v = null; try { v = raw ? JSON.parse(raw) : store.get('prof', null); } catch (e) { }
+    v = v && typeof v === 'object' ? v : {}; v.figs = v.figs || {}; return v;
+  },
+  set(v) { try { if (window.Android && Android.profSet) Android.profSet('box', JSON.stringify(v)); } catch (e) { } store.set('prof', v); }
+};
+let prof = PROF.get();
+function figOf(ch) {
+  const f = prof.figs[ch] || (prof.figs[ch] = { lvl: 1, xp: 0, up: {} });
+  f.lvl = Math.max(1, Math.min(LVL_MAX, f.lvl | 0)); f.xp = Math.max(0, f.xp | 0); f.up = BX.cleanUp(f.up);
+  return f;
+}
+const upOf = ch => figOf(ch).up;
+const freePts = f => (f.lvl - 1) - UPG.reduce((a, u) => a + f.up[u.k], 0);
+function addXp(ch, n) {
+  const f = figOf(ch), before = f.lvl;
+  f.xp += n;
+  while (f.lvl < LVL_MAX && f.xp >= xpNeed(f.lvl)) { f.xp -= xpNeed(f.lvl); f.lvl++; }
+  if (f.lvl >= LVL_MAX) f.xp = 0;
+  PROF.set(prof);
+  return f.lvl - before;
+}
+const lvlChip = ch => `<span class="belt">Nivå ${figOf(ch).lvl}</span>`;
 
 /* ---------- skärmar ---------- */
 let current = 'menu';
@@ -51,6 +89,7 @@ function show(id) {
   current = id;
   if (id === 'menu') buildMenu();
   if (id === 'ladder') buildLadder();
+  if (id === 'train') buildTrain();
   if (id === 'join') buildJoin();
   if (id === 'lobby') buildLobby();
   if (id === 'fight') resize();
@@ -67,7 +106,7 @@ function buildMenu() {
   $('meCard').setAttribute('style', styleOf(ME.ch));
   const bl = belts[ME.ch] || 0;
   $('meCard').innerHTML = `${avHTML(ME.ch)}<div style="text-align:left"><small>Boxare (tryck för att byta)</small><b>${esc(charName(ME.ch))}</b>
-    ${stHTML(ME.ch)}${bl ? `<span class="belt">🏆 ${bl} bälte${bl > 1 ? 'n' : ''}</span>` : ''}</div>`;
+    ${stHTML(ME.ch)}<div style="display:flex;gap:6px;margin-top:3px">${lvlChip(ME.ch)}${freePts(figOf(ME.ch)) > 0 ? '<span class="belt" style="background:#34C759;color:#fff">⬆️ Poäng att fördela!</span>' : ''}${bl ? `<span class="belt">🏆 ${bl}</span>` : ''}</div></div>`;
   $('toHost').classList.toggle('hidden', !canHost());
 }
 function charGrid(el, mark, onPick) {
@@ -96,6 +135,26 @@ function buildLadder() {
   if ($('ladReset')) $('ladReset').onclick = () => { SFX.tap(); prog[ME.ch] = 0; saveProg(); buildLadder(); };
 }
 
+/* ---------- träning: lägg poäng på uppgraderingar ---------- */
+function buildTrain() {
+  const f = figOf(ME.ch), pts = freePts(f), s = BX.statsOf(ME.ch);
+  const pip = n => '●'.repeat(n) + '○'.repeat(UPG_MAX - n);
+  $('trBox').innerHTML = `<div class="card" style="flex-direction:row;align-items:center;gap:12px" id="trMe">${avHTML(ME.ch, 'mini')}<div style="flex:1;min-width:0">
+      <b style="font-size:19px">${esc(charName(ME.ch))}</b> <small style="color:var(--muted)">(tryck för att byta)</small>
+      <div class="xpbar"><i style="width:${f.lvl >= LVL_MAX ? 100 : f.xp / xpNeed(f.lvl) * 100}%"></i><span>Nivå ${f.lvl}${f.lvl >= LVL_MAX ? ' (max)' : ` · ${f.xp}/${xpNeed(f.lvl)} XP`}</span></div></div></div>
+    <div class="card"><h4>${pts > 0 ? `⬆️ ${pts} poäng att fördela` : 'Inga poäng kvar – boxas för mer XP!'}</h4>
+      <p class="note">Varje ny nivå ger 1 poäng. Grund: ⚡ ${s.spd} · 💪 ${s.pow} · ❤️ ${s.sta}</p>
+      <div class="upl">${UPG.map(u => `<div class="upr"><span class="ic">${u.ic}</span><div class="grow"><b>${u.n}</b> <span class="pips">${pip(f.up[u.k])}</span><small>${u.d}</small></div>
+        <button class="btn green small" data-k="${u.k}" ${pts > 0 && f.up[u.k] < UPG_MAX ? '' : 'disabled'}>+</button></div>`).join('')}</div>
+      ${UPG.some(u => f.up[u.k]) ? '<button class="btn white small" id="trReset">🔄 Fördela om poängen</button>' : ''}</div>`;
+  $('trBox').querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
+    const ff = figOf(ME.ch); if (freePts(ff) <= 0 || ff.up[b.dataset.k] >= UPG_MAX) return;
+    ff.up[b.dataset.k]++; PROF.set(prof); SFX.pick(); buzz(15); buildTrain();
+  });
+  if ($('trReset')) $('trReset').onclick = () => { const ff = figOf(ME.ch); for (const u of UPG) ff.up[u.k] = 0; PROF.set(prof); SFX.tap(); buildTrain(); };
+  $('trMe').onclick = () => { SFX.tap(); pickFigure('Vem ska träna?', () => show('train'), () => show('train')); };
+}
+
 /* ---------- snabbmatch ---------- */
 const DIFFS = [{ n: 'Lätt', lv: 2 }, { n: 'Medel', lv: 5 }, { n: 'Svår', lv: 8 }, { n: 'Proffs', lv: 10 }];
 let qDiff = store.get('qdiff', 1);
@@ -118,11 +177,11 @@ const G = { mode: 'ai', fight: null, snap: null, prev: null, names: ['', ''], ch
 
 function startAI(opCh, lv, opts) {
   G.mode = 'ai'; G.opts = opts || {}; G.opts.opCh = opCh; G.opts.lv = lv;
-  begin([{ ch: ME.ch, name: charName(ME.ch) }, { ch: opCh, name: charName(opCh), bot: lv }], 0);
+  begin([{ ch: ME.ch, name: charName(ME.ch), up: upOf(ME.ch) }, { ch: opCh, name: charName(opCh), bot: lv, up: BX.botUp(lv) }], 0);
 }
 function startDuo(a, b) {
   G.mode = 'duo'; G.opts = { duo: [a, b] };
-  begin([{ ch: a, name: charName(a) }, { ch: b, name: charName(b) }], -2);
+  begin([{ ch: a, name: charName(a), up: upOf(a) }, { ch: b, name: charName(b), up: upOf(b) }], -2);
 }
 function begin(pl, me) {
   G.fight = new BX.Fight(pl[0], pl[1], { rounds: 3, roundTime: 60 });
@@ -290,11 +349,28 @@ function handleEvents(s) {
 }
 
 /* ---------- resultat ---------- */
+function xpAward(R, w) {
+  const mine = G.mode === 'duo' ? [0, 1] : G.me >= 0 && !G.spect ? [G.me] : [];
+  let html = '', up = false;
+  for (const i of mine) {
+    const ch = G.chs[i], won = i === w, o = R.b[1 - i], me = R.b[i];
+    let xp = (won ? 60 : 20) + me.landed * 2 + o.kd * 15;
+    if (G.mode === 'ai') { xp += G.opts.lv * 4; if (won && G.opts.ladder != null) xp += (G.opts.ladder + 1) * 10; }
+    if (G.mode === 'host' || G.mode === 'client') xp += 20;
+    const lv = addXp(ch, xp), f = figOf(ch);
+    if (lv) up = true;
+    html += `<div class="xpl">${avHTML(ch)}<div style="flex:1"><b>${esc(G.names[i])} +${xp} XP</b>${lv ? ' <span class="lvup">NIVÅ UPP! 🎉</span>' : ''}
+      <div class="xpbar"><i style="width:${f.lvl >= LVL_MAX ? 100 : f.xp / xpNeed(f.lvl) * 100}%"></i><span>Nivå ${f.lvl}</span></div></div></div>`;
+  }
+  if (up) setTimeout(() => { SFX.win(); buzz(60); }, 300);
+  return html ? `<div class="xpbox">${html}${up ? '<p style="font-size:15px">Nya poäng att lägga i 🏋️ Träningen!</p>' : ''}</div>` : '';
+}
 async function showResult() {
   const s = G.snap, w = s.w;
   const R = G.fight ? G.fight.result() : G.res;
   const tab = `<table class="stt"><tr><td><b>${esc(G.names[0])}</b></td><td></td><td><b>${esc(G.names[1])}</b></td></tr>
-    ${[['landed', 'Träffar'], ['thrown', 'Slag'], ['dmg', 'Skada'], ['blocked', 'Parerade'], ['kd', 'Nedslag']].map(([k, n]) => `<tr><td>${R.b[0][k]}</td><td>${n}</td><td>${R.b[1][k]}</td></tr>`).join('')}</table>`;
+    ${[['landed', 'Träffar'], ['thrown', 'Slag'], ['dmg', 'Skada'], ['blocked', 'Parerade'], ['kd', 'Nedslag']].map(([k, n]) => `<tr><td>${R.b[0][k]}</td><td>${n}</td><td>${R.b[1][k]}</td></tr>`).join('')}</table>`
+    + xpAward(R, w);
   if (G.mode === 'ai') {
     const won = w === 0;
     if (won) {
@@ -665,7 +741,7 @@ function hostRecv(d) {
   const id = 'c' + d.slice(0, bar);
   let m; try { m = JSON.parse(d.slice(bar + 1)); } catch (e) { return; }
   if (m.t === 'hi') {
-    const p = { id, name: String(m.name || 'Boxare').slice(0, 14), ch: Math.abs(m.ch | 0) % CHARS.length };
+    const p = { id, name: String(m.name || 'Boxare').slice(0, 14), ch: Math.abs(m.ch | 0) % CHARS.length, up: BX.cleanUp(m.up) };
     const old = HOST.lobby.find(q => q.id === id);
     if (old) Object.assign(old, p); else { HOST.lobby.push(p); SFX.pick(); buzz(15); }
     hostTo(id, { t: 'welcome', id });
@@ -686,7 +762,7 @@ function hostBegin() {
   HOST.inGame = true; HOST.fighters = [A.id, B.id];
   G.mode = 'host';
   const me = HOST.fighters.indexOf('h');
-  begin([{ ch: A.ch, name: A.name }, { ch: B.ch, name: B.name }], me);
+  begin([{ ch: A.ch, name: A.name, up: A.id === 'h' ? upOf(ME.ch) : A.up }, { ch: B.ch, name: B.name, up: B.id === 'h' ? upOf(ME.ch) : B.up }], me);
   G.spect = me < 0; if (G.spect) { buildPads(); resize(); }
   hostAll(startMsg());
   hostLobby();
@@ -710,7 +786,7 @@ function clientConnect() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
   CL.ws = ws;
   panel(`<h3>Ansluter… <span class="spin">🥊</span></h3>`);
-  ws.onopen = () => { CL.tries = 0; closePanel(); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch })); if (current !== 'fight') show('lobby'); };
+  ws.onopen = () => { CL.tries = 0; closePanel(); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch, up: upOf(ME.ch) })); if (current !== 'fight') show('lobby'); };
   ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (er) { return; } clientRecv(m); };
   ws.onclose = () => {
     if (CL.ws !== ws || CL.closing) return;
@@ -787,6 +863,7 @@ $('toDuo').onclick = () => { SFX.tap(); duoPick = []; buildDuo(); show('duo'); }
 $('toJoin').onclick = () => { SFX.tap(); show('join'); };
 $('toHost').onclick = () => { SFX.tap(); startHosting(); };
 $('toHelp').onclick = () => { SFX.tap(); help(); };
+$('toTrain').onclick = () => { SFX.tap(); show('train'); };
 $('toHub').onclick = () => { SFX.tap(); goHub(); };
 
 window.onBack = function () {

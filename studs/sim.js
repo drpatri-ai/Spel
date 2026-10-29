@@ -22,9 +22,10 @@
     bomb: { name: 'Bomben', ic: '💣', desc: 'Smäller och tänder pinnar' },
     lucky: { name: 'Turhjulet', ic: '🎰', desc: 'En slumpad kraft varje gång' },
     double: { name: 'Dubbelpoäng', ic: '💰', desc: 'Dubbla poäng i 3 skott' },
-    tramp: { name: 'Studsmattan', ic: '🤸', desc: 'Golvet studsar upp kulan en gång' }
+    tramp: { name: 'Studsmattan', ic: '🤸', desc: 'Golvet studsar upp kulan en gång' },
+    hug: { name: 'Mormors kram', ic: '💖', desc: 'Två extra kulor' }
   };
-  const CHAR_POW = ['guide', 'multi', 'fire', 'zap', 'bucket', 'spook', 'bomb', 'lucky', 'double', 'tramp'];
+  const CHAR_POW = ['guide', 'multi', 'fire', 'zap', 'bucket', 'spook', 'bomb', 'lucky', 'double', 'tramp', 'hug'];
   const LUCKY = ['multi', 'fire', 'zap', 'bomb', 'spook', 'tramp', 'double', 'bucket'];
   const powOf = ch => CHAR_POW[((ch | 0) % CHAR_POW.length + CHAR_POW.length) % CHAR_POW.length];
 
@@ -251,6 +252,7 @@
       else if (pw === 'double') { dbl = true; pl.fx.double += 2; }
       else if (pw === 'spook') spook++;
       else if (pw === 'tramp') tramp++;
+      else if (pw === 'hug') { pl.balls += 2; ev.push({ f, e: 'free', why: 'hug', x: r1(x), y: r1(y) }); }
       else if (pw === 'zap' || pw === 'bomb') {
         const R = pw === 'zap' ? 165 : 200;
         const near = [];

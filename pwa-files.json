@@ -1,9 +1,10 @@
 {
- "version": "80a32de517b5",
+ "version": "315bc9ce6c21",
  "files": [
   "./",
   "avatars/1.jpg",
   "avatars/10.jpg",
+  "avatars/11.jpg",
   "avatars/2.jpg",
   "avatars/3.jpg",
   "avatars/4.jpg",
@@ -14,6 +15,7 @@
   "avatars/9.jpg",
   "avatars/full1.webp",
   "avatars/full10.webp",
+  "avatars/full11.webp",
   "avatars/full2.webp",
   "avatars/full3.webp",
   "avatars/full4.webp",

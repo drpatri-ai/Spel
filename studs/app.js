@@ -475,7 +475,7 @@ function onEvent(e, pl) {
     ids.forEach((id, i) => setTimeout(() => { const p = V.byId[id]; if (!p) return; p.pop = performance.now() / 1000; SFX.pop(i); const q = PG.pos(G.S.board, p, V.clock); burst(p.s === 'k' ? (q.x + q.x2) / 2 : q.x, p.s === 'k' ? (q.y + q.y2) / 2 : q.y, '#fff', 4, 90); }, (G.ff ? 12 : 35) * i));
   } else if (e.e === 'free') {
     SFX.free(); buzz(30);
-    floatText(e.why === 'bucket' ? 'Fri kula! ⚪' : 'Fri kula för poängen! ⚪', Math.max(150, Math.min(W - 150, e.x)), e.why === 'bucket' ? PG.BUCKET_Y - 30 : e.y - 40, '#FFD23F', 30);
+    floatText(e.why === 'bucket' ? 'Fri kula! ⚪' : e.why === 'hug' ? '+2 kulor! 💖' : 'Fri kula för poängen! ⚪', Math.max(150, Math.min(W - 150, e.x)), e.why === 'bucket' ? PG.BUCKET_Y - 30 : e.y - 40, '#FFD23F', 30);
   } else if (e.e === 'lucky') {
     floatText('🎰 ' + POWERS[e.p].name + '!', W / 2, 300, '#FFD23F', 34);
   } else if (e.e === 'pow') {

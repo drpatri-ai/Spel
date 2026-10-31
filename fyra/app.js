@@ -49,6 +49,9 @@ function show(id, push = true) {
   if (id === 'menu') { hist.length = 0; buildMenu(); }
   if (id === 'stats') buildStats();
   if (id === 'settings') buildSettings();
+  if (id === 'net') buildNet();
+  if (id === 'nlobby') buildNLobby();
+  if (window.Android && Android.keepAwake) try { Android.keepAwake(S.mode === 'net' && (id === 'game' || id === 'nlobby')); } catch (e) { }
 }
 function back() {
   const prev = hist.pop() || 'menu';
@@ -88,9 +91,19 @@ document.querySelectorAll('[data-level]').forEach(b => b.addEventListener('click
 }));
 document.querySelectorAll('[data-back]').forEach(b => b.addEventListener('click', () => { SFX.tap(); back(); }));
 
-function startSelect() { selStep = 0; selPicked = []; renderSelect(); show('select'); }
+let selDone = null;   // nätverk: bara en figur väljs, sedan anropas selDone(figur)
+function startSelect(done) { selStep = 0; selPicked = []; selDone = done || null; renderSelect(); show('select'); }
 function renderSelect() {
   const bot = S.mode === 'bot';
+  if (selDone) {
+    $('selTitle').textContent = 'Välj din figur!'; $('selSub').textContent = 'Du spelar över nätverket 🌐';
+    $('chars').innerHTML = CHARS.map((_, i) => `<button class="char ${i === NET.taken ? 'taken' : ''}" data-i="${i}" data-tag="Motståndaren" style="${styleOf(i)}">${avHTML(i)}<b>${esc(charName(i))}</b></button>`).join('');
+    $('chars').querySelectorAll('.char').forEach(el => el.addEventListener('click', () => {
+      const i = +el.dataset.i; if (i === NET.taken) { SFX.bonk(); return; } SFX.pick(); buzz(12); el.classList.add('pick'); store.set('netCh', i);
+      const d = selDone; selDone = null; setTimeout(() => d(i), 380);
+    }));
+    return;
+  }
   $('selTitle').textContent = selStep === 0 ? (bot ? 'Välj din figur!' : 'Spelare 1 – välj figur!') : (bot ? 'Välj motståndare 🤖' : 'Spelare 2 – välj figur!');
   $('selSub').textContent = selStep === 0 ? (bot ? 'Datorn spelar på nivå ' + LEVEL_NAME[S.level] : 'Ni turas om på samma skärm') : 'Vem vill du utmana?';
   $('chars').innerHTML = CHARS.map((_, i) => {
@@ -146,7 +159,7 @@ function buildFrame() {
   hit.addEventListener('pointerup', e => {
     if (!active) return;
     active = false;
-    if (canHumanPlay()) play(colAt(e.clientX));
+    if (canHumanPlay()) humanPlay(colAt(e.clientX));
   });
   hit.addEventListener('pointercancel', () => { active = false; hideGhost(); });
   hit.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') hideGhost(); });
@@ -193,14 +206,15 @@ function renderPieces() {
 }
 
 /* ---------- spelarkort ---------- */
+const pName = pi => (S.players[pi] && S.players[pi].name) || charName(S.players[pi].char);
 function renderCards() {
   for (let pi = 0; pi < 2; pi++) {
     const p = S.players[pi];
-    const tag = S.mode === 'bot' ? (p.bot ? '🤖 ' + LEVEL_NAME[S.level] : 'Du') : 'Spelare ' + (pi + 1);
+    const tag = S.mode === 'bot' ? (p.bot ? '🤖 ' + LEVEL_NAME[S.level] : 'Du') : S.mode === 'net' ? (pi === NET.me ? 'Du' : '🌐 Motståndare') : 'Spelare ' + (pi + 1);
     const el = $('pc' + pi);
     el.setAttribute('style', styleOf(p.char));
     el.className = 'pc';
-    el.innerHTML = `${avHTML(p.char)}<div class="info"><span class="nm">${esc(charName(p.char))}</span><span class="tag">${tag}</span></div>
+    el.innerHTML = `${avHTML(p.char)}<div class="info"><span class="nm">${esc(pName(pi))}</span><span class="tag">${tag}</span></div>
       <span class="sc" id="sc${pi}">${S.scores[pi]}</span><div class="bubble" id="bub${pi}"></div>`;
   }
 }
@@ -210,7 +224,8 @@ function updateTurn() {
     el.classList.toggle('turn', !S.over && S.turn === pi);
     $('sc' + pi).textContent = S.scores[pi];
   }
-  const human = !S.players[S.turn].bot;
+  const human = !S.players[S.turn].bot && (S.mode !== 'net' || S.turn === NET.me);
+  $('bUndo').classList.toggle('hidden', S.mode === 'net'); $('bRestart').classList.toggle('hidden', S.mode === 'net');
   $('bUndo').disabled = S.over || !S.moves.length || (S.mode === 'bot' && !S.moves.some(m => !S.players[m.pi].bot));
   $('bHint').disabled = S.over || !human || S.hints[S.turn] <= 0;
   $('hintN').textContent = human ? S.hints[S.turn] : S.hints[0];
@@ -225,7 +240,13 @@ function say(pi, text, ms = 1900) {
 }
 
 /* ---------- spelets gång ---------- */
-function canHumanPlay() { return current === 'game' && !S.over && !S.busy && S.players[S.turn] && !S.players[S.turn].bot; }
+function canHumanPlay() { return current === 'game' && !S.over && !S.busy && S.players[S.turn] && !S.players[S.turn].bot && (S.mode !== 'net' || (S.turn === NET.me && !NET.waiting)); }
+function humanPlay(c) {
+  if (S.mode !== 'net') return play(c);
+  if (AI.dropRow(S.board, c) < 0) return play(c);   // full kolumn: skaka brädet
+  if (NET.host) hostMove(c, 0);
+  else { S.busy = true; hideGhost(); clSend({ t: 'mv', c }); setTimeout(() => { if (S.busy && !S.over && S.turn === NET.me && !NET.chainBusy) S.busy = false; }, 4000); }
+}
 
 function startGame() {
   const bot = S.mode === 'bot';
@@ -317,7 +338,7 @@ function endRound(winner, line) {
     const a = line[0], z = line[line.length - 1];
     $('wline').innerHTML = `<line x1="${50 + a[1] * 100}" y1="${50 + a[0] * 100}" x2="${50 + z[1] * 100}" y2="${50 + z[0] * 100}"/>`;
   }
-  const humanLost = S.mode === 'bot' && winner === 1;
+  const humanLost = (S.mode === 'bot' && winner === 1) || (S.mode === 'net' && winner >= 0 && NET.me >= 0 && winner !== NET.me);
   if (winner >= 0) {
     S.scores[winner]++;
     $('pc' + winner).classList.add('happy');
@@ -337,7 +358,7 @@ function endRound(winner, line) {
     if (tok !== S.token || current !== 'game') return;
     if (winner >= 0) {
       const wc = S.players[winner].char;
-      await celebrate(wc, (S.mode === 'bot' && winner === 0) ? 'Du vann!' : charName(wc) + ' vann!');
+      await celebrate(wc, ((S.mode === 'bot' && winner === 0) || (S.mode === 'net' && winner === NET.me)) ? 'Du vann!' : pName(winner) + ' vann!');
       if (tok !== S.token || current !== 'game') return;
     }
     showResult(winner);
@@ -353,7 +374,9 @@ function showResult(winner) {
   if (winner >= 0) {
     const ch = P[winner].char;
     let title, sub;
-    if (bot && winner === 0) { title = 'Du vann! 🎉'; sub = pick(['Snyggt spelat!', 'Datorn hade ingen chans!', 'Grymt jobbat!']); }
+    if (S.mode === 'net' && winner === NET.me) { title = 'Du vann! 🎉'; sub = pick(['Snyggt spelat!', 'Fyra i rad – snyggt!', 'Mästare! 👑']); }
+    else if (S.mode === 'net') { title = esc(pName(winner)) + ' vann!'; sub = pick(['Revansch?', 'Det var nära!', 'Nästa runda är din!']); }
+    else if (bot && winner === 0) { title = 'Du vann! 🎉'; sub = pick(['Snyggt spelat!', 'Datorn hade ingen chans!', 'Grymt jobbat!']); }
     else if (bot) { title = esc(charName(ch)) + ' vann!'; sub = pick(['Försök igen – du klarar det!', 'Det var nära!', 'Revansch?']); }
     else { title = esc(charName(ch)) + ' vinner!'; sub = pick(['Fyra i rad – snyggt!', 'Vilket drag!', 'Mästare! 👑']); }
     html = `<div class="win-av">${!(bot && winner === 1) ? '<div class="crown">👑</div>' : ''}${avHTML(ch)}</div><h3>${title}</h3><p>${sub}</p>`;
@@ -361,13 +384,21 @@ function showResult(winner) {
     html = `<div class="score-big" style="margin-top:6px">${avHTML(P[0].char).replace('class="av ', 'class="av sm ')}🤝${avHTML(P[1].char).replace('class="av ', 'class="av sm ')}</div>
       <h3>Oavgjort!</h3><p>Brädet blev fullt – ingen fick fyra i rad.</p>`;
   }
-  html += scoreLine + `<button class="btn green" id="rNext">▶️ Nästa runda</button><button class="btn white" id="rMenu">🏠 Till menyn</button>`;
+  html += scoreLine + `<button class="btn green" id="rNext">▶️ Nästa runda</button><button class="btn white" id="rMenu">${S.mode === 'net' ? '🚪 Lämna matchen' : '🏠 Till menyn'}</button>`;
   openPanel(html);
-  $('rNext').onclick = () => { SFX.tap(); closePanel(); S.round++; newRound(); };
+  $('rNext').onclick = () => {
+    SFX.tap();
+    if (S.mode === 'net') {
+      if (NET.host) { closePanel(); hostNextRound(); }
+      else { clSend({ t: 'next' }); $('rNext').disabled = true; $('rNext').textContent = `⏳ Väntar på ${pName(0)}…`; }
+      return;
+    }
+    closePanel(); S.round++; newRound();
+  };
   $('rMenu').onclick = () => { SFX.tap(); closePanel(); leaveGame(); };
 }
 
-function leaveGame() { S.token++; S.over = true; show('menu'); }
+function leaveGame() { S.token++; S.over = true; if (S.mode === 'net') { netLeave(); return; } show('menu'); }
 
 function openPanel(html) {
   $('panel').innerHTML = html;
@@ -384,7 +415,8 @@ function confirmBox(title, text, yes, onYes) {
 /* knappar i spelet */
 $('gHome').onclick = () => {
   SFX.tap();
-  if (S.moves.length && !S.over) confirmBox('Avsluta spelet?', 'Ställningen sparas inte.', 'Ja, till menyn', leaveGame);
+  if (S.mode === 'net') confirmBox('Lämna matchen?', NET.host ? 'Matchen tar slut för båda.' : 'Du lämnar matchen.', 'Ja, lämna', leaveGame);
+  else if (S.moves.length && !S.over) confirmBox('Avsluta spelet?', 'Ställningen sparas inte.', 'Ja, till menyn', leaveGame);
   else leaveGame();
 };
 $('gSound').onclick = () => {
@@ -431,19 +463,229 @@ $('bHint').onclick = async () => {
   updateTurn();
 };
 
+
+/* ================= NÄTVERK (wifi + internet) =================
+   Värden bestämmer: tar emot drag, kollar att det är rätt tur och skickar dem till alla.
+   Spelare 0 = värden, spelare 1 = den som går med först. Fler som går med får titta på. */
+const Q = new URLSearchParams(location.search);
+const PORT = 8765;
+const REMOTE = (location.protocol === 'http:' && location.port === String(PORT)) || !!NET_ONLINE;
+const HOSTPAGE = REMOTE && Q.get('host') === '1';
+const CLIENT = REMOTE && !HOSTPAGE;
+const APP_HOME = 'https://appassets.androidplatform.net/assets/';
+const NET = { taken: -1, host: false, me: -1, ws: null, ok: false, opp: null, id: null, waiting: false, closing: false, tries: 0, chain: Promise.resolve(), chainBusy: false, ch: 0, name: '' };
+const canHostLan = () => !!(window.Android && Android.netHost);
+const urlName = () => (Q.get('n') || '').slice(0, 14);
+// drag spelas i tur och ordning (ett drag i taget, även om två kommer tätt)
+function queue(fn) { NET.chain = NET.chain.then(async () => { NET.chainBusy = true; try { await fn(); } catch (e) { } NET.chainBusy = false; }); }
+
+/* ---------- menyn för nätverk ---------- */
+let scanning = false;
+function buildNet() {
+  const app = !!window.Android;
+  $('netBox').innerHTML = `<div class="card"><h4>🎮 Starta en match</h4>
+      <p class="note">Du blir värd och väljer figur. Sedan går en motståndare med från sin telefon.</p>
+      ${canHostLan() ? '<button class="btn" id="nHostLan">📡 Starta wifi-match</button>' : ''}
+      <button class="btn blue" id="nHostOn">🌍 Starta internetmatch</button></div>
+    ${netJoinCardHTML('card')}
+    ${app ? `<div class="card"><h4>📡 Matcher i wifi:t</h4><div class="found" id="found"></div><button class="btn white small" id="rescan">🔄 Sök igen</button></div>` : ''}
+    <div class="card"><h4>🔢 Wifi-match: skriv adressen</h4>
+      <p class="note">${app ? 'Hittas inte matchen? Skriv adressen som står på värdens skärm.' : 'Wifi-matchen startas i Android-appen. Skanna QR-koden hos värden med kameran, eller skriv adressen här.'}</p>
+      <div class="ipbox"><input id="ipIn" type="text" inputmode="decimal" placeholder="t.ex. 192.168.1.23" value="${esc(store.get('lastIp', ''))}"><button class="btn green small" id="ipGo">Anslut</button></div></div>`;
+  const ch = store.get('netCh', 0) % CHARS.length;
+  if ($('nHostLan')) $('nHostLan').onclick = () => { SFX.tap(); S.mode = 'net'; startSelect(i => startHostingLan(i)); };
+  $('nHostOn').onclick = () => { SFX.tap(); S.mode = 'net'; startSelect(i => { location.href = netOnlineHostURL('fyra.html', `n=${encodeURIComponent(charName(i))}&c=${i}`); }); };
+  $('ipGo').onclick = () => {
+    let v = $('ipIn').value.trim().replace(/^https?:\/\//, '').replace(/\/.*$/, ''), port = PORT;
+    if (v.includes(':')) { port = +v.split(':')[1] || PORT; v = v.split(':')[0]; }
+    if (!/^\d+\.\d+\.\d+\.\d+$/.test(v)) { $('ipIn').style.borderColor = '#FF4D6D'; SFX.bonk(); return; }
+    store.set('lastIp', v); goJoin(v, port, 'fyra.html');
+  };
+  netBindJoinCard((page, code) => `${page}?online=${encodeURIComponent(code)}&n=${encodeURIComponent(charName(ch))}&c=${ch}&back=${encodeURIComponent(location.href.split('?')[0])}`);
+  if (app) { $('rescan').onclick = () => { SFX.tap(); scan(); }; scan(); }
+}
+function scan() {
+  if (!window.Android || !Android.netScan || scanning) return;
+  scanning = true;
+  $('found').innerHTML = `<p class="note"><span class="spin">🔴</span> Letar efter matcher…</p>`;
+  window.onNetScan = list => {
+    scanning = false;
+    if (current !== 'net' || !$('found')) return;
+    $('found').innerHTML = list.length ? list.map(m => { const g = netGameOf(m.name); return `<button class="btn blue" data-ip="${esc(m.ip)}" data-port="${m.port}" data-page="${g.page}">${esc(g.label)}</button>`; }).join('')
+      : `<p class="note">Hittade ingen match. Be värden trycka 📡 Starta wifi-match – och kolla att ni är på samma wifi.</p>`;
+    $('found').querySelectorAll('[data-ip]').forEach(b => b.onclick = () => { SFX.tap(); goJoin(b.dataset.ip, +b.dataset.port, b.dataset.page); });
+  };
+  try { Android.netScan(); } catch (e) { scanning = false; }
+}
+function goJoin(ip, port, page) {
+  const ch = store.get('netCh', 0) % CHARS.length, back = location.href.split('?')[0];
+  location.href = `http://${ip}:${port || PORT}/${page}?n=${encodeURIComponent(charName(ch))}&c=${ch}&back=${encodeURIComponent(back)}`;
+}
+function startHostingLan(ch) {
+  let r = null;
+  try { r = JSON.parse(Android.netHost('fyra:' + charName(ch) + 's 4 i rad')); } catch (e) { }
+  if (!r || !r.ok) { openPanel(`<h3>Gick inte 😕</h3><p>Kunde inte starta. Prova att stänga appen och öppna igen.</p><button class="btn" id="pOk">OK</button>`); $('pOk').onclick = closePanel; return; }
+  location.href = `http://127.0.0.1:${r.port}/fyra.html?host=1&n=${encodeURIComponent(charName(ch))}&c=${ch}`;
+}
+function netLeave() {
+  NET.closing = true;
+  try { NET.ws && NET.ws.close(); } catch (e) { } NET.ws = null;
+  if (NET.host || HOSTPAGE) { try { Android.netStop(); } catch (e) { } location.href = NET_ONLINE ? 'fyra.html' : APP_HOME + 'fyra.html'; return; }
+  const back = Q.get('back');
+  if (back && /^https?:\/\//.test(back)) location.href = back;
+  else if (NET_ONLINE) location.href = 'fyra.html';
+  else if (window.Android) location.href = APP_HOME + 'fyra.html';
+  else { S.mode = '2p'; show('menu'); }
+}
+
+/* ---------- värd ---------- */
+const hostAll = o => { if (NET.ws && NET.ws.readyState === 1) NET.ws.send('*' + JSON.stringify(o)); };
+const hostTo = (id, o) => { if (NET.ws && NET.ws.readyState === 1) NET.ws.send('@' + id + '|' + JSON.stringify(o)); };
+function hostStart() {
+  NET.host = true; NET.me = 0; S.mode = 'net';
+  NET.ch = (+Q.get('c') || 0) % CHARS.length; NET.name = urlName() || charName(NET.ch);
+  hostConnect(); show('nlobby');
+}
+function hostConnect() {
+  const ws = netSocket(true);
+  NET.ws = ws;
+  ws.onopen = () => { NET.ok = true; if (current === 'nlobby') buildNLobby(); };
+  ws.onmessage = e => hostRecv(e.data);
+  ws.onclose = () => { NET.ok = false; if (NET.ws === ws && !NET.closing) setTimeout(() => { if (NET.ws === ws) hostConnect(); }, 1000); };
+}
+function syncMsg() {
+  return { t: 'sync', p: S.players.map(p => ({ ch: p.char, n: p.name })), ids: ['h', NET.opp], mv: S.moves.map(m => [m.c, m.pi]), turn: S.turn, st: S.starter, sc: S.scores, rd: S.round, ov: S.over ? 1 : 0 };
+}
+function hostRecv(d) {
+  if (d[0] === '+') return;
+  if (d[0] === '-') {
+    const id = d.slice(1);
+    if (id === NET.opp) {
+      const nm = pName(1);
+      NET.opp = null; S.token++; S.over = true; NET.chain = Promise.resolve();
+      closePanel(); show('nlobby');
+      openPanel(`<h3>${esc(nm)} lämnade 👋</h3><p>Väntar på en ny motståndare…</p><button class="btn green" id="pOk">OK</button>`); $('pOk').onclick = () => { SFX.tap(); closePanel(); };
+    }
+    return;
+  }
+  const bar = d.indexOf('|'); if (bar < 0) return;
+  const id = d.slice(0, bar);
+  let m; try { m = JSON.parse(d.slice(bar + 1)); } catch (e) { return; }
+  if (m.t === 'hi') {
+    let ch = Math.abs(m.ch | 0) % CHARS.length;
+    const name = String(m.n || 'Spelare').slice(0, 14);
+    hostTo(id, { t: 'welcome', id });
+    if (!NET.opp || NET.opp === id) {
+      const re = NET.opp === id && S.players[1];
+      NET.opp = id;
+      if (ch === NET.ch) { hostTo(id, { t: 'taken', ch }); if (!S.players[1] || NET.opp !== id) NET.opp = null; return; }   // två likadana brickor går inte att skilja åt
+      if (re) { S.players[1].char = ch; S.players[1].name = name; hostTo(id, syncMsg()); renderCards(); return; }
+      SFX.pick(); buzz(30);
+      S.players = [{ char: NET.ch, name: NET.name, bot: false }, { char: ch, name, bot: false }];
+      S.scores = [0, 0]; S.round = 1; S.starter = 0;
+      closePanel(); buildFrame(); show('game'); newRound(); hostAll(syncMsg());
+    } else hostTo(id, syncMsg());   // tittare
+  } else if (m.t === 'mv') {
+    if (id === NET.opp) hostMove(m.c | 0, 1);
+  } else if (m.t === 'next') {
+    if (id === NET.opp && S.over && current === 'game') { closePanel(); hostNextRound(); }
+  }
+}
+function hostMove(c, pi) {
+  queue(async () => {
+    if (S.over || S.turn !== pi || c < 0 || c > 6 || AI.dropRow(S.board, c) < 0) { hostAll(syncMsg()); return; }
+    hostAll({ t: 'mv', c, pi });
+    await play(c);
+  });
+}
+function hostNextRound() { if (!S.over) return; S.round++; newRound(); hostAll(syncMsg()); }
+function buildNLobby() {
+  let invite = '';
+  if (NET_ONLINE) invite = netHostCardHTML('fyra.html', 'card', NET.ok);
+  else {
+    let ips = []; try { ips = JSON.parse(Android.netIps()); } catch (e) { }
+    const url = ips.length ? `http://${ips[0]}:${PORT}/fyra.html` : '';
+    let qr = ''; if (url && window.qrcode) { try { const q = qrcode(0, 'M'); q.addData(url); q.make(); qr = q.createSvgTag(4, 2); } catch (e) { } }
+    invite = `<div class="card"><h4>📲 Bjud in en motståndare</h4>${url ? `<div class="joininfo"><div class="qr">${qr}</div><div><p class="note">iPhone/iPad: skanna med kameran eller öppna i Safari:</p><div class="url">${esc(url.replace(/^http:\/\//, ''))}</div></div></div>
+      <p class="note">Android med appen: 4 i rad → 🌐 Över nätverket → hitta matchen.</p>` : `<p class="note">⚠️ Hittar inget wifi. Anslut till wifi (eller slå på surfzon) och tryck 🔄.</p><button class="btn white small" id="reIp">🔄 Uppdatera</button>`}</div>`;
+  }
+  $('nlBox').innerHTML = `<div class="card"><div class="waitp">${avHTML(NET.ch)}<div>${esc(NET.name)} 👑<br><span class="note">${NET.ok ? '<span class="spin">⏳</span> Väntar på att någon går med – matchen börjar direkt.' : 'Startar…'}</span></div></div></div>${invite}`;
+  if ($('reIp')) $('reIp').onclick = () => { SFX.tap(); buildNLobby(); };
+}
+$('nlBack').onclick = () => { SFX.tap(); confirmBox('Avsluta?', 'Matchen stängs.', 'Ja, avsluta', netLeave); };
+
+/* ---------- den som går med ---------- */
+const clSend = o => { if (NET.ws && NET.ws.readyState === 1) NET.ws.send(JSON.stringify(o)); };
+function clientStart() {
+  S.mode = 'net'; NET.host = false;
+  startSelect(i => { NET.ch = i; NET.name = (+Q.get('c') === i && urlName()) || charName(i); clientConnect(); });
+  $('select').querySelector('[data-back]').onclick = () => { SFX.tap(); netLeave(); };
+}
+function clientConnect() {
+  NET.closing = false;
+  const ws = netSocket(false);
+  NET.ws = ws;
+  openPanel(`<h3>Ansluter… <span class="spin">🔴</span></h3>`);
+  ws.onopen = () => { NET.tries = 0; ws.send(JSON.stringify({ t: 'hi', ch: NET.ch, n: NET.name })); };
+  ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (er) { return; } clientRecv(m); };
+  ws.onclose = () => {
+    if (NET.ws !== ws || NET.closing) return;
+    if (NET.tries++ < 3) { setTimeout(clientConnect, 800); return; }
+    openPanel(`<h3>Tappade kontakten 📡</h3><p>Är värden kvar?</p><button class="btn green" id="pRetry">🔄 Försök igen</button><button class="btn white" id="pLeave">🚪 Lämna</button>`);
+    $('pRetry').onclick = () => { SFX.tap(); NET.tries = 0; clientConnect(); };
+    $('pLeave').onclick = () => { SFX.tap(); netLeave(); };
+  };
+}
+function clientRecv(m) {
+  if (m.t === 'welcome') { NET.id = m.id; return; }
+  if (m.t === 'taken') {
+    // motståndaren har redan den figuren: välj en annan
+    NET.taken = m.ch; closePanel();
+    startSelect(i => { NET.ch = i; NET.name = charName(i); clSend({ t: 'hi', ch: NET.ch, n: NET.name }); });
+    $('selSub').textContent = 'Den figuren är redan tagen – välj en annan!';
+    return;
+  }
+  if (m.t === 'sync') {
+    NET.chain = Promise.resolve(); NET.chainBusy = false;
+    const wasRound = S.round, wasOver = S.over, first = current !== 'game';
+    S.players = m.p.map(p => ({ char: p.ch, name: p.n, bot: false }));
+    // vem är jag? spelare 1 om värden säger att det är jag, annars tittare
+    NET.me = m.ids[1] && m.ids[1] === NET.id ? 1 : -1;
+    S.token++;
+    S.board = AI.newBoard(); S.moves = [];
+    for (const [c, pi] of m.mv) { const r = AI.dropRow(S.board, c); if (r < 0) continue; S.board[r][c] = pi + 1; S.moves.push({ r, c, pi }); }
+    S.turn = m.turn; S.starter = m.st; S.scores = m.sc; S.round = m.rd; S.over = !!m.ov; S.busy = false; S.hints = S.hints || [3, 3];
+    if (first) { buildFrame(); show('game'); }
+    if (first || m.rd !== wasRound || (wasOver && !S.over)) { closePanel(); S.hints = [3, 3]; hideGhost(); clearArrow(); setTimeout(() => say(S.turn, pick(SAY.start)), 300); if (!first) SFX.pick(); }
+    $('roundLbl').textContent = 'Runda ' + S.round;
+    renderCards(); renderPieces(); updateTurn();
+    if (first && NET.me < 0) openPanel(`<h3>Du tittar på 👀</h3><p>Två spelar redan. Du ser matchen live.</p><button class="btn green" id="pOk">OK</button>`), $('pOk').onclick = () => { SFX.tap(); closePanel(); };
+  } else if (m.t === 'mv') {
+    queue(() => play(m.c | 0));
+  } else if (m.t === 'hostgone') {
+    NET.closing = true; S.over = true;
+    openPanel(`<h3>Matchen är slut 👋</h3><p>${esc(pName(0))} avslutade.</p><button class="btn green" id="pLeave">OK</button>`); $('pLeave').onclick = () => { SFX.tap(); netLeave(); };
+  }
+}
+
 /* ---------- statistik ---------- */
 function getStats() {
   const s = store.get('stats', null) || {};
   s.bot = s.bot || {};
   for (const l of ['easy', 'medium', 'hard']) s.bot[l] = Object.assign({ w: 0, l: 0, d: 0, streak: 0, best: 0 }, s.bot[l]);
-  s.chars = s.chars || [0, 0, 0, 0];
+  s.chars = s.chars || [];
+  for (let i = 0; i < CHARS.length; i++) s.chars[i] = s.chars[i] || 0;
   s.two = s.two || 0;
   s.draws2 = s.draws2 || 0;
   return s;
 }
 function recordStats(winner) {
   const s = getStats();
-  if (S.mode === 'bot') {
+  if (S.mode === 'net') {
+    s.net = Object.assign({ w: 0, l: 0, d: 0 }, s.net);
+    if (NET.me < 0) { } else if (winner === NET.me) { s.net.w++; s.chars[S.players[winner].char] = (s.chars[S.players[winner].char] || 0) + 1; }
+    else if (winner >= 0) s.net.l++; else s.net.d++;
+  } else if (S.mode === 'bot') {
     const b = s.bot[S.level];
     if (winner === 0) { b.w++; b.streak++; b.best = Math.max(b.best, b.streak); }
     else if (winner === 1) { b.l++; b.streak = 0; }
@@ -468,6 +710,7 @@ function buildStats() {
   $('statsList').innerHTML = `
     <div class="sec">🤖 Mot datorn</div>
     <div class="row"><table><tr><th>Nivå</th><th>Vinster</th><th>Förluster</th><th>Oavgjort</th><th>Bästa svit</th></tr>${rows}</table></div>
+    ${s.net ? `<div class="sec">🌐 Över nätverket</div><div class="row"><table><tr><th></th><th>Vinster</th><th>Förluster</th><th>Oavgjort</th></tr><tr><td>🌐</td><td>${s.net.w}</td><td>${s.net.l}</td><td>${s.net.d}</td></tr></table></div>` : ''}
     <div class="sec">👫 Två spelare – vinster per figur</div>${bars}
     <p class="hint-txt">${s.two} spelade rundor · ${s.draws2} oavgjorda</p>
     <button class="btn white small" id="resetStats" style="align-self:center">🗑️ Nollställ statistik</button>`;
@@ -501,7 +744,8 @@ window.onBack = function () {
     if ($('rNext')) { closePanel(); leaveGame(); } else closePanel();
     return true;
   }
-  if (current === 'menu') { goHub(); return true; }
+  if (current === 'menu') { if (REMOTE) netLeave(); else goHub(); return true; }
+  if (current === 'nlobby') { $('nlBack').click(); return true; }
   if (current === 'game') { $('gHome').click(); return true; }
   SFX.tap(); back();
   return true;
@@ -509,4 +753,6 @@ window.onBack = function () {
 
 $('toHub').onclick = () => { SFX.tap(); goHub(); };
 buildFrame();
-show('menu', false);
+if (HOSTPAGE) hostStart();
+else if (CLIENT) clientStart();
+else show('menu', false);

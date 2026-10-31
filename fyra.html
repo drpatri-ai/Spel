@@ -235,6 +235,25 @@ td,th{padding:6px 4px;text-align:center}
 th{color:var(--muted);font-weight:500;font-size:15px}
 td:first-child,th:first-child{text-align:left}
 .bar{height:12px;border-radius:6px;background:var(--c);min-width:4px}
+/* nätverk */
+.hidden{display:none!important}
+.nwrap{width:min(94vw,560px);display:flex;flex-direction:column;gap:12px;margin-top:64px;padding-bottom:24px}
+.card{background:var(--card);border-radius:22px;padding:12px 14px;box-shadow:0 5px 0 #C9C3E8;display:flex;flex-direction:column;gap:8px}
+.card h4{margin:0;font-size:18px}
+.card .btn{width:100%}
+.note{color:var(--muted);font-size:15px;margin:0;line-height:1.35}
+.joininfo{display:flex;gap:12px;align-items:center}
+.qr{background:#fff;border-radius:14px;padding:6px;flex:none;line-height:0}
+.qr svg{width:min(34vw,150px);height:auto}
+.url{font-weight:700;font-size:clamp(17px,4.2vmin,24px);white-space:nowrap}
+.ipbox{display:flex;gap:8px}
+.ipbox input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:600;border:3px solid #E4E0F7;border-radius:14px;padding:8px 12px;color:var(--ink);-webkit-user-select:text;user-select:text}
+.ipbox .btn{width:auto}
+.found{display:flex;flex-direction:column;gap:10px}
+.spin{display:inline-block;animation:spin2 1s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+.waitp{display:flex;align-items:center;gap:12px;font-weight:600}
+.waitp .av{width:56px}
 </style>
 </head>
 <body>
@@ -247,6 +266,7 @@ td:first-child,th:first-child{text-align:left}
   <div class="menu">
     <button class="btn green" data-go="2p">👫 Två spelare</button>
     <button class="btn" data-go="bot">🤖 Mot datorn</button>
+    <button class="btn blue" data-go="net">🌐 Över nätverket</button>
     <button class="btn purple" data-go="stats">🏆 Statistik</button>
     <button class="btn pink" data-go="settings">⚙️ Inställningar</button>
     <button class="btn white" id="toHub">🏠 Alla spel</button>
@@ -299,6 +319,16 @@ td:first-child,th:first-child{text-align:left}
   </div>
 </section>
 
+<!-- NÄTVERK -->
+<section id="net" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Över nätverket 🌐</h2><span style="width:48px"></span></div>
+  <div class="nwrap" id="netBox"></div>
+</section>
+<section id="nlobby" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="nlBack">⬅️</button><h2>Väntar på motståndare</h2><span style="width:48px"></span></div>
+  <div class="nwrap" id="nlBox"></div>
+</section>
+
 <!-- STATISTIK -->
 <section id="stats" class="screen scroll">
   <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Statistik 🏆</h2><span style="width:48px"></span></div>
@@ -317,6 +347,8 @@ td:first-child,th:first-child{text-align:left}
 <canvas id="confetti"></canvas>
 
 <script src="shared/core.js"></script>
+<script src="shared/net.js"></script>
+<script src="boll/qrcode.js"></script>
 <script src="fyra/ai.js"></script>
 <script src="fyra/app.js"></script>
 </body>

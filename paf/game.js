@@ -311,10 +311,15 @@
 
     // stopp?
     if (st.y <= R + 0.05 && Math.abs(st.vy) < 0.6 && Math.abs(st.vx) < 0.35) { st.settle += dt; st.spin *= 0.85; } else st.settle = 0;
-    // nödbroms: har den nästan inte flyttat sig på 4 sekunder är sparken över
-    if (Math.abs(st.x - (st.lastX || 0)) > 1) { st.lastX = st.x; st.stuckT = 0; } else st.stuckT = (st.stuckT || 0) + dt;
-    if (st.stuckT > 4 && st.y < R + 2) st.settle = 1;
-    if (!st.done && (st.settle > 0.45 || st.t > 150)) {
+    // nödbroms: ligger den på marken och har nästan inte flyttat sig på 4 sekunder är sparken över
+    // (räknas bara på marken – aldrig medan figuren är i luften)
+    st.flyT = (st.flyT || 0) + dt;
+    const onGround = st.y <= R + 0.3 && Math.abs(st.vy) < 2;
+    if (!onGround || Math.abs(st.x - (st.lastX || 0)) > 1) { st.lastX = st.x; st.stuckT = 0; } else st.stuckT = (st.stuckT || 0) + dt;
+    if (st.stuckT > 4) st.settle = 1;
+    // säkerhetsgräns: bara flygtiden räknas (inte tiden man siktade) och bara när figuren är nere vid marken
+    if (st.flyT > 600 && st.y < R + 2) st.settle = 1;
+    if (!st.done && st.settle > 0.45) {
       st.done = true; st.phase = 'done'; st.thrust = false;
       setTimeout(() => hooks.onEnd && hooks.onEnd({ dist: Math.max(0, Math.round(st.x)), coins: Math.round(st.coins), maxAlt: Math.round(st.maxAlt), maxSpd: Math.round(st.maxSpd * 3.6) }), 650);
     }

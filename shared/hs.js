@@ -31,6 +31,8 @@ const HS_CATS = [
   { k: 'boxBelts', ic: '🏅', n: 'Flest mästarbälten', u: 'bälten' },
   { k: 'tankKills', ic: '🪖', n: 'Flest träffar med stridsvagn', u: 'träffar' },
   { k: 'tankMis', ic: '🎖️', n: 'Flest uppdrag klara', u: 'uppdrag' },
+  { k: 'opsKills', ic: '🎯', n: 'Flest träffar i Operation Öken', u: 'träffar' },
+  { k: 'opsWins', ic: '🏜️', n: 'Flest vunna matcher i Operation Öken', u: 'vinster' },
   { k: 'lvl', ic: '⭐', n: 'Högst nivå sammanlagt', u: 'nivåer' }
 ];
 function hsProf(key, storePrefix, storeKey) {
@@ -53,7 +55,8 @@ function hsCollect() {
   try { S.boxBelts = Object.values(makeStore('bx').get('belts', {}) || {}).reduce((a, v) => a + num(v), 0); const p = hsProf('box', 'bx', 'prof'); if (p && p.figs) for (const f of Object.values(p.figs)) lvl += num(f.lvl); } catch (e) { }
   try { const p = hsProf('tank', 'bw', 'prof'); if (p) { S.tankMis = max(Object.values(p.mis || {})); if (p.figs) for (const f of Object.values(p.figs)) lvl += num(f.lvl); } } catch (e) { }
   const c = hsCounters();
-  S.boxWins = num(c.boxWins); S.tankKills = num(c.tankKills);
+  S.boxWins = num(c.boxWins); S.tankKills = num(c.tankKills); S.opsKills = num(c.opsKills);
+  try { const st = makeStore('bo').get('stats', null); S.opsWins = num(st && st.wins); } catch (e) { }
   S.lvl = lvl;
   return S;
 }

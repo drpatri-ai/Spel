@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Operation Öken</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#8A6424">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(170deg,#F2C66D 0%,#C8913A 45%,#5A3B14 100%)}
+.hidden{display:none!important}
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:8px 14px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:58px}
+.me b{font-size:19px}
+.me small{display:block;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#2B2350;color:#FFD23F;border-radius:10px;padding:2px 9px;font-weight:700;font-size:14px;white-space:nowrap}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #menu{flex-direction:row;gap:26px}
+  #menu .logo .l1{font-size:42px}#menu .logo .l2{font-size:34px}
+  #menu .menu .btn{padding:9px 18px}
+}
+#menu .menu{gap:10px}
+.row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.row2 .btn{min-width:0;flex:1}
+.wrap{width:min(96vw,1000px);display:flex;flex-direction:column;gap:12px;margin-top:64px;padding-bottom:20px}
+.card{background:var(--card);border-radius:22px;padding:12px 14px;box-shadow:0 5px 0 #C9C3E8;display:flex;flex-direction:column;gap:8px}
+.card h4{margin:0;font-size:18px}
+.note{color:var(--muted);font-size:15px;margin:0;line-height:1.35}
+.av.mini{width:64px;flex:none}
+.xpbar{position:relative;height:20px;border-radius:10px;background:#E4E0F7;overflow:hidden;margin-top:4px}
+.xpbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#F2C66D,#FF8A3D)}
+.xpbar span{position:relative;display:block;text-align:center;font-weight:700;font-size:13px;line-height:20px}
+
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.opt b{min-width:110px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{padding:6px 12px;border-radius:12px;background:#F0EDFF;font-weight:700;font-size:15px}
+.seg button.on{background:#2B2350;color:#fff}
+.gar{display:flex;flex-direction:column;gap:12px}
+@media (min-aspect-ratio:5/4){.gar{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}}
+.sides{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sides button{border-radius:16px;padding:10px 6px;font-weight:700;font-size:16px;color:#fff;opacity:.55;line-height:1.2}
+.sides button small{display:block;font-weight:600;font-size:12px;opacity:.9}
+.sides button.on{opacity:1;box-shadow:0 0 0 4px #FFD23F}
+/* lobby */
+.plist{display:flex;flex-direction:column;gap:8px}
+.pl{display:flex;align-items:center;gap:10px;background:#F6F4FF;border-radius:16px;padding:6px 10px;font-weight:600}
+.pl .av{width:42px;border-width:3px}
+.pl span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl.mine{box-shadow:0 0 0 3px #FFD23F}
+.joininfo{display:flex;gap:12px;align-items:center}
+.qr{background:#fff;border-radius:14px;padding:6px;flex:none;line-height:0}
+.qr svg{width:min(34vw,150px);height:auto}
+.url{font-weight:700;font-size:clamp(17px,4.2vmin,24px);white-space:nowrap}
+.ipbox{display:flex;gap:8px}
+.ipbox input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:600;border:3px solid #E4E0F7;border-radius:14px;padding:8px 12px;color:var(--ink);-webkit-user-select:text;user-select:text}
+.found{display:flex;flex-direction:column;gap:10px}
+.found .btn{min-width:0;width:100%}
+.spin{display:inline-block;animation:spin2 1s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+
+/* spelet */
+#game{padding:0;gap:0;background:#1a1208;justify-content:flex-start}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:flex-start;gap:8px;z-index:3;pointer-events:none}
+.hud .ibtn{pointer-events:auto;flex:none;width:42px;height:42px;font-size:20px}
+.mebox{display:flex;align-items:center;gap:6px;background:#0008;border-radius:16px;padding:4px 10px 4px 4px;color:#fff;min-width:0}
+.mebox .av{width:38px;border-width:3px}
+.mebox .bars{display:flex;flex-direction:column;gap:2px}
+.mebox .bar{width:clamp(60px,18vw,160px);height:12px;border-radius:6px;background:#0008;border:2px solid #fff;overflow:hidden;position:relative}
+.mebox .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#FF4D6D,#FFD23F 45%,#34C759)}
+.mebox .bar.ar{height:7px;border-width:1px}
+.mebox .bar.ar i{background:#7FD8FF}
+.mebox b{font-size:13px;white-space:nowrap}
+.clock{margin:0 auto;background:#fffe;border-radius:14px;padding:3px 12px;font-weight:700;font-size:clamp(15px,4vmin,22px);text-align:center;box-shadow:0 3px 0 #0004;line-height:1.1;white-space:nowrap}
+.clock small{display:block;font-size:.55em;color:var(--muted)}
+.clock.bomb{background:#FF3B30;color:#fff;animation:bl .5s steps(2) infinite}
+.clock.bomb small{color:#fff}
+@keyframes bl{50%{background:#9E1B1B}}
+.ammo{background:#0008;color:#fff;border-radius:14px;padding:4px 10px;font-weight:700;font-size:14px;text-align:right;line-height:1.25;white-space:nowrap}
+.ammo big{font-size:20px}
+.money{color:#8BE07A}
+.feed{position:absolute;right:calc(var(--safe-r) + 6px);top:calc(var(--safe-t) + 54px);z-index:3;display:flex;flex-direction:column;gap:4px;align-items:flex-end;pointer-events:none}
+.feed div{background:#000a;color:#fff;border-radius:10px;padding:2px 9px;font-weight:600;font-size:13px;animation:fin .3s;white-space:nowrap;display:flex;align-items:center;gap:4px}
+.feed div.mine{box-shadow:0 0 0 2px #FFD23F}
+@keyframes fin{from{opacity:0;transform:translateY(-6px)}}
+.gbtns{position:absolute;z-index:4;display:flex;flex-direction:column;gap:8px;align-items:center}
+.gb{width:clamp(48px,11vmin,62px);height:clamp(48px,11vmin,62px);border-radius:50%;font-size:clamp(22px,5.5vmin,30px);display:grid;place-items:center;background:#fffd;box-shadow:0 4px 0 #0006;touch-action:none;position:relative}
+.gb small{position:absolute;right:-4px;bottom:-4px;background:#2B2350;color:#fff;border-radius:8px;font-size:11px;font-weight:700;padding:0 5px;line-height:16px}
+.gb.dim{opacity:.35}
+.gbrow{display:flex;gap:8px}
+#actB{position:absolute;z-index:4;left:50%;transform:translateX(-50%);border-radius:22px;padding:10px 18px;font-weight:700;font-size:18px;background:#FFD23F;box-shadow:0 5px 0 #A8741E;touch-action:none;white-space:nowrap}
+#actB .pg{display:block;height:6px;border-radius:3px;background:#0002;margin-top:4px;overflow:hidden}
+#actB .pg i{display:block;height:100%;background:#FF3B30;width:0}
+#buyB{background:#8BE07A}
+.bigtxt{position:absolute;left:0;right:0;top:30%;text-align:center;font-weight:700;color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;
+  text-shadow:0 6px 0 var(--ink);pointer-events:none;z-index:5;font-size:clamp(32px,9vmin,80px);line-height:1.05}
+.bigtxt small{display:block;font-size:.42em;-webkit-text-stroke:3px var(--ink)}
+.bigtxt.pop{animation:pop2 .45s cubic-bezier(.2,1.8,.4,1)}
+@keyframes pop2{from{transform:scale(.2);opacity:0}}
+.hint{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 6px);text-align:center;color:#fff;font-weight:600;font-size:14px;text-shadow:0 1px 0 #000;pointer-events:none;z-index:3;opacity:.85}
+.rank{display:flex;flex-direction:column;gap:5px;width:100%}
+.rank .r{display:flex;align-items:center;gap:8px;background:#F6F4FF;border-radius:12px;padding:4px 10px;font-weight:600;font-size:15px}
+.rank .r .av{width:32px;border-width:2px}
+.rank .r span{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .r.mine{box-shadow:0 0 0 3px #34C759}
+.rank h5{margin:6px 0 0;font-size:16px;text-align:left}
+/* köpmenyn */
+.shop{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;width:100%}
+.shop button{display:flex;align-items:center;gap:8px;background:#F6F4FF;border-radius:14px;padding:8px 10px;text-align:left;font-weight:700;font-size:15px;line-height:1.15;min-width:0;overflow-wrap:anywhere}
+.shop button .ic{font-size:26px}
+.shop button small{display:block;font-weight:600;color:var(--muted);font-size:12px}
+.shop button.own{box-shadow:0 0 0 3px #34C759;background:#EFFFF2}
+.shop button:disabled{opacity:.4}
+.shop h5{grid-column:1/-1;margin:4px 0 0;text-align:left;font-size:15px}
+.panel.wide{width:min(94vw,640px)}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+    <button class="me" id="meCard"></button>
+    <div class="menu">
+      <button class="btn green" id="toQuick">🤖 Spela mot datorn</button>
+      <div class="row2">
+        <button class="btn small hidden" id="toHost">📡 Starta nätverksmatch</button>
+        <button class="btn blue small" id="toOnline">🌍 Starta internetmatch</button>
+        <button class="btn white small" id="toJoin">🔗 Gå med</button>
+      </div>
+      <div class="row2">
+        <button class="btn white small" id="toHelp">❓ Så spelar man</button>
+        <button class="btn white small" id="toHub">🏠 Alla spel</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="meScr" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="meBack">⬅️</button><span></span></div>
+  <h2 style="margin-top:58px" id="meTitle">Vem spelar?</h2>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="quick" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Mot datorn 🤖</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="qBox" style="max-width:640px"></div>
+</section>
+
+<section id="join" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Gå med 🔗</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="joinBox" style="max-width:560px"></div>
+</section>
+
+<section id="lobby" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="lobbyBack">⬅️</button><h2>Ökenstaden 🏜️</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="lobbyBox"></div>
+</section>
+
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <button class="ibtn" id="gBack">⏸️</button>
+    <div class="mebox" id="mebox"></div>
+    <div class="clock" id="clock"></div>
+    <div class="ammo" id="ammo"></div>
+  </div>
+  <div class="feed" id="feed"></div>
+  <div class="gbtns" id="gR">
+    <div class="gbrow"><button class="gb" id="bHe">💣<small>0</small></button><button class="gb" id="bSmoke">💨<small>0</small></button><button class="gb" id="bFlash">⚡<small>0</small></button></div>
+    <div class="gbrow"><button class="gb" id="bSwap">🔁</button><button class="gb" id="bReload">🔄</button></div>
+  </div>
+  <div class="gbtns" id="gL"><button class="gb" id="buyB">🛒</button></div>
+  <button id="actB" class="hidden"><span id="actT">💣 Håll för att lägga ut</span><span class="pg"><i id="actP"></i></span></button>
+  <div class="hint" id="hint">Vänster tumme: gå · Höger tumme: sikta och skjut</div>
+  <div class="bigtxt hidden" id="big"></div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="shared/net.js"></script>
+<script src="boll/qrcode.js"></script>
+<script src="ops/sim.js"></script>
+<script src="ops/app.js"></script>
+</body>
+</html>

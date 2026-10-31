@@ -1,5 +1,5 @@
 {
- "version": "d74ccf56fa02",
+ "version": "5324c2786eba",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -112,6 +112,9 @@
   "krock/parts.js",
   "krock/sim.js",
   "manifest.webmanifest",
+  "ops.html",
+  "ops/app.js",
+  "ops/sim.js",
   "paf.html",
   "paf/app.js",
   "paf/game.js",

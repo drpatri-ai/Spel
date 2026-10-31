@@ -129,8 +129,8 @@ function checkUpdate(manual) {
 }
 window.onUpdateInfo = info => {
   let cur = 0; try { cur = JSON.parse(Android.appVersion()).code; } catch (e) { }
-  const newer = info && info.code > cur && info.url;
-  if ($('verNote')) $('verNote').textContent = !info ? 'Kunde inte söka – är du uppkopplad?' : newer ? `Ny version ${info.name} finns!` : 'Du har den senaste versionen ✅';
+  const newer = info && !info.err && info.code > cur && info.url;
+  if ($('verNote')) $('verNote').textContent = !info ? 'Kunde inte söka – är du uppkopplad till internet?' : info.err ? 'Hittade ingen uppdatering just nu' : newer ? `Ny version ${info.name} finns!` : 'Du har den senaste versionen ✅';
   if (newer) { upInfo = info; showUpBar(); if (upManual) startUpdate(); }
 };
 function showUpBar() {

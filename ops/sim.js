@@ -30,6 +30,7 @@
   const SPAWN = [[], []];   // 0 = röda (start i söder), 1 = blå (start i norr)
   for (let y = 28; y <= 30; y++) for (let x = 15; x <= 24; x += 2) SPAWN[0].push([(x + .5) * CS, (y + .5) * CS]);
   for (let y = 3; y <= 6; y++) for (let x = 17; x <= 22; x += 2) SPAWN[1].push([(x + .5) * CS, (y + .5) * CS]);
+  for (const sp of SPAWN) for (let i = sp.length - 1; i >= 0; i--) if (grid[Math.floor(sp[i][1] / CS) * GW + Math.floor(sp[i][0] / CS)] !== 0) sp.splice(i, 1);   // aldrig i en låda
   const SPAWN_ZONE = [{ x0: 13, y0: 27, x1: 26, y1: 31 }, { x0: 16, y0: 2, x1: 23, y1: 7 }];
   const solidAt = (cx, cy) => cx < 0 || cy < 0 || cx >= GW || cy >= GH || grid[cy * GW + cx] !== 0;
   const solidXY = (x, y) => solidAt(Math.floor(x / CS), Math.floor(y / CS));
@@ -257,7 +258,7 @@
         const ux = Math.cos(a), uy = Math.sin(a), sx = p.x + ux * (PR + 4), sy = p.y + uy * (PR + 4);
         let len = rayWall(sx, sy, ux, uy, Wp.range), hit = null;
         for (const q of this.P) {
-          if (!q.alive || q === p) continue;
+          if (!q.alive || q === p || q.side === p.side) continue;   // kulor går förbi lagkamrater
           const fx = q.x - sx, fy = q.y - sy, t = fx * ux + fy * uy; if (t < 0 || t > len) continue;
           const px = fx - ux * t, py = fy - uy * t; if (px * px + py * py > (PR + 2) * (PR + 2)) continue;
           len = t; hit = q;
@@ -374,7 +375,7 @@
       let tgt = null, td = 1e9;
       if (!blind) for (const q of foes) { const d = Math.hypot(q.x - p.x, q.y - p.y); if (d < 1600 && d < td && canSee(p.x, p.y, q.x, q.y, this.smokes)) { tgt = q; td = d; } }
       if (tgt) { this.intel = this.intel || [null, null]; this.intel[p.side] = { x: tgt.x, y: tgt.y, t: this.time }; }
-      if (tgt) { if (!A.seen || A.seen.id !== tgt.id) A.react = Math.max(.12, .75 - L * .065) * (.7 + r() * .6); A.seen = { id: tgt.id, x: tgt.x, y: tgt.y }; A.seenT = 4; }
+      if (tgt) { if (!A.seen || A.seenT <= 0) A.react = Math.max(.12, .75 - L * .065) * (.7 + r() * .6); A.seen = { id: tgt.id, x: tgt.x, y: tgt.y }; A.seenT = 4; }
       else if (A.hurtT > 0 && A.hurtBy) { const h = this.P.find(q => q.id === A.hurtBy); if (h && h.alive) { A.seen = { id: h.id, x: h.x, y: h.y }; A.seenT = 2; } }
       A.hurtT = (A.hurtT || 0) - dt;
       // mål för rörelsen
@@ -383,13 +384,22 @@
         if (b && b.planted) goal = [b.x + (r() - .5) * 0, b.y + 120];
         else if (b && b.carrier === p.id) goal = this.siteSpot(this.siteGoal, 1);
         else if (b && !b.carrier && !b.planted) goal = [b.x, b.y];
-        else { const c = b && this.P.find(q => q.id === b.carrier); goal = c && Math.hypot(c.x - p.x, c.y - p.y) > 220 ? [c.x, c.y] : this.siteSpot(this.siteGoal, p.ch + 3); }
+        else {
+          const c = b && this.P.find(q => q.id === b.carrier);
+          if (c && c.bot < 0) {
+            // en människa bär laddningen: gå före till den plats hon är närmast och säkra den
+            const site = Math.hypot(c.x - SITES.A.label[0] * CS, c.y - SITES.A.label[1] * CS) <= Math.hypot(c.x - SITES.B.label[0] * CS, c.y - SITES.B.label[1] * CS) ? 'A' : 'B';
+            goal = this.siteSpot(site, p.ch + 3 + (A.k || 0));
+          } else goal = c && Math.hypot(c.x - p.x, c.y - p.y) > 320 ? [c.x, c.y] : this.siteSpot(this.siteGoal, p.ch + 3 + (A.k || 0));
+        }
       } else {
         if (b && b.planted) goal = [b.x, b.y];
-        else { const k = this.P.filter(q => q.side === 1 && !q.out).indexOf(p); goal = this.siteSpot(k % 2 ? 'B' : 'A', k + 5); }
+        else { const k = this.P.filter(q => q.side === 1 && !q.out).indexOf(p); goal = this.siteSpot(k % 2 ? 'B' : 'A', k + 5 + (A.k || 0)); }
         // försvararna hjälper varandra: gå mot där en lagkamrat senast såg fienden
         const it = this.intel && this.intel[1];
-        if (!(b && b.planted) && it && it.t - this.time < 10 && L >= 2) goal = [it.x, it.y];
+        if (!(b && b.planted) && it && it.t - this.time < 10 && L >= 2) {
+          if (Math.hypot(it.x - p.x, it.y - p.y) < 60) this.intel[1] = null; else goal = [it.x, it.y];
+        }
       }
       if (this.phase === 'freeze') goal = null;
       let mx = 0, my = 0, ax = Math.cos(p.a), ay = Math.sin(p.a), fire = 0, act = 0;
@@ -407,12 +417,14 @@
         const fwd = td > keep + 150 ? .6 : td < keep - 150 ? -.4 : 0;
         if (L >= 3) { mx = nx * fwd - ny * A.strafe * .6; my = ny * fwd + nx * A.strafe * .6; }
         if (b && b.planted && p.side === 1 && Math.hypot(b.x - p.x, b.y - p.y) < 60 && td > 900) { mx = my = 0; act = 1; fire = 0; }
-      } else if (tgt) { const aim = Math.atan2(tgt.y - p.y, tgt.x - p.x); ax = Math.cos(aim); ay = Math.sin(aim); }
+      } else if (tgt) { const aim = Math.atan2(tgt.y - p.y, tgt.x - p.x); ax = Math.cos(aim); ay = Math.sin(aim); if (goal) { [mx, my] = this.pathDir(p, goal[0], goal[1]); const l = Math.hypot(mx, my) || 1; mx = mx / l * .5; my = my / l * .5; } }
       else {
+        if (A.seen && A.seenT > 0 && Math.hypot(A.seen.x - p.x, A.seen.y - p.y) < 50) A.seenT = 0;
         if (A.seen && A.seenT > 0 && !(p.side === 0 && b && b.carrier === p.id)) { [mx, my] = this.pathDir(p, A.seen.x, A.seen.y); }
         else if (goal) {
           const d = Math.hypot(goal[0] - p.x, goal[1] - p.y);
           if (d > 30) [mx, my] = this.pathDir(p, goal[0], goal[1]);
+          else { A.idle = (A.idle || 0) + dt; if (A.idle > 2.5 + r() * 3 && !(b && b.planted)) { A.idle = 0; A.k = (A.k || 0) + 1; } }   // byt hörn ibland
           // planterar / desarmerar
           if (p.side === 0 && b && b.carrier === p.id && (inZone(SITES.A, p.x, p.y) || inZone(SITES.B, p.x, p.y))) { mx = my = 0; act = 1; }
           if (p.side === 1 && b && b.planted && Math.hypot(b.x - p.x, b.y - p.y) < 55) { mx = my = 0; act = 1; }
@@ -424,7 +436,14 @@
       // granat ibland mot fienden
       if (tgt && A.react <= 0 && td > 300 && td < 700 && r() < .004 * L) { if (p.he) p.press.he = 1; else if (p.flash && r() < .5) p.press.flash = 1; }
       if (tgt && p.side === 1 && b && b.planted === false && p.smoke && td > 500 && r() < .002 * L) p.press.smoke = 1;
-      const ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; }
+      let ml = Math.hypot(mx, my); if (ml > 1) { mx /= ml; my /= ml; ml = 1; }
+      // fast (mot en kompis eller ett hörn): kliv åt sidan en stund
+      if (A.dodgeT > 0) { A.dodgeT -= dt; if (ml > .1) { const sx = -my * A.dodge, sy = mx * A.dodge; mx = mx * .3 + sx; my = my * .3 + sy; } }
+      else if (ml > .3 && this.phase === 'live') {
+        A.stuckT = Math.hypot(p.x - (A.lx || 0), p.y - (A.ly || 0)) < 1.5 ? (A.stuckT || 0) + dt : 0;
+        if (A.stuckT > .4) { A.stuckT = 0; A.dodgeT = .5 + r() * .4; A.dodge = r() < .5 ? 1 : -1; }
+      }
+      A.lx = p.x; A.ly = p.y;
       const wasAct = p.in.act;
       p.in = { mx, my, ax, ay, fire, act: act || (wasAct && (p.plantT > 0 || p.defT > 0) && !tgt ? 1 : 0) };
     }

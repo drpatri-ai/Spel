@@ -133,6 +133,7 @@ let paused = false;
 /* ---------- styrning: två tumspakar + knappar, eller tangentbord och mus ---------- */
 const INP = { mx: 0, my: 0, ax: 0, ay: 0, fire: 0, act: 0 };
 const PRESS = {};
+const FIRE = { btn: 0, auto: store.get('autofire', true) };
 const STK = { m: null, a: null };
 const STR = () => Math.max(46, Math.min(80, Math.min(VW, VH) * .12));
 const cvEl = $('cv');
@@ -178,7 +179,7 @@ function updStick() {
   const v = s => { if (!s) return [0, 0, 0]; let dx = s.x - s.ox, dy = s.y - s.oy; const l = Math.hypot(dx, dy); if (l > R) { s.ox = s.x - dx / l * R; s.oy = s.y - dy / l * R; dx = s.x - s.ox; dy = s.y - s.oy; } return [dx / R, dy / R, Math.min(1, l / R)]; };
   const m = v(STK.m), a = v(STK.a);
   INP.mx = m[0]; INP.my = m[1];
-  if (STK.a) { if (a[2] > .25) { INP.ax = a[0]; INP.ay = a[1]; } INP.fire = a[2] > .55 ? 1 : 0; } else INP.fire = 0;
+  if (STK.a) { if (a[2] > .25) { INP.ax = a[0]; INP.ay = a[1]; } INP.fire = FIRE.auto && a[2] > .55 ? 1 : 0; } else INP.fire = 0;
 }
 const meOf = s => s && s.P.find(p => p.id === G.me);
 function readInput() {
@@ -188,6 +189,7 @@ function readInput() {
   const out = Object.assign({}, INP);
   if (kx || ky) { const l = Math.hypot(kx, ky); out.mx = kx / l; out.my = ky / l; }
   if (KEYS.KeyE) out.act = 1;
+  if (FIRE.btn || KEYS.Space) out.fire = 1;
   const me = meOf(G.snap);
   if (MOUSE.used && me) {
     const D = G.disp[me.id] || me, [sx, sy] = toScreen(D.x, D.y);
@@ -195,7 +197,7 @@ function readInput() {
     if (MOUSE.down) out.fire = 1;
   }
   // siktehjälp för tumspaken: dra siktet mot en synlig fiende inom en liten vinkel
-  if (STK.a && me && me.al && Math.hypot(out.ax, out.ay) > .2) {
+  if ((STK.a || FIRE.btn) && me && me.al && Math.hypot(out.ax, out.ay) > .2) {
     const aim = Math.atan2(out.ay, out.ax); let best = null, bd = .22;
     for (const p of G.snap.P) {
       if (!p.al || p.s === me.s || !VISIBLE.has(p.id)) continue;
@@ -215,6 +217,11 @@ holdBtn('bHe', () => PRESS.he = 1);
 holdBtn('bSmoke', () => PRESS.smoke = 1);
 holdBtn('bFlash', () => PRESS.flash = 1);
 holdBtn('buyB', () => openBuy());
+// skjutknappen: skjuter åt det håll man siktar så länge den hålls in
+const fireB = $('fireB');
+fireB.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); FIRE.btn = 1; fireB.classList.add('on'); try { fireB.setPointerCapture(e.pointerId); } catch (er) { } buzz(10); });
+const fireUp = () => { FIRE.btn = 0; fireB.classList.remove('on'); };
+fireB.addEventListener('pointerup', fireUp); fireB.addEventListener('pointercancel', fireUp); fireB.addEventListener('lostpointercapture', fireUp);
 const actB = $('actB');
 actB.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); INP.act = 1; try { actB.setPointerCapture(e.pointerId); } catch (er) { } buzz(15); });
 const actUp = () => { INP.act = 0; };
@@ -312,7 +319,8 @@ function updHud(s) {
     const gb = (id, n) => { $(id).querySelector('small').textContent = n; $(id).classList.toggle('dim', !n); };
     gb('bHe', me.he); gb('bSmoke', me.sm); gb('bFlash', me.fl);
     $('bSwap').classList.toggle('dim', !me.pr);
-    $('gR').classList.toggle('hidden', !me.al);
+    $('gR').classList.toggle('hidden', !me.al); fireB.classList.toggle('hidden', !me.al || (MOUSE.used && !STK.m && !STK.a && !FIRE.btn));
+    if (!me.al) fireUp();
     $('buyB').classList.toggle('hidden', !canBuyHere(s, me));
     // knappen för att lägga ut / desarmera
     let act = '';
@@ -335,7 +343,10 @@ function updHud(s) {
   // knapparnas plats
   const land = VW > VH, R = STR();
   const gR = $('gR'), gL = $('gL');
-  gR.style.right = `calc(var(--safe-r) + ${land ? 14 : 10}px)`; gR.style.bottom = `calc(var(--safe-b) + ${R * 2 + 56}px)`;
+  const fs = fireB.offsetHeight || 84;
+  if (land) { fireB.style.right = `calc(var(--safe-r) + ${R * 2 + 52}px)`; fireB.style.bottom = `calc(var(--safe-b) + ${Math.max(10, 30 + R - fs / 2)}px)`; }
+  else { fireB.style.right = `calc(var(--safe-r) + ${34 + R - fs / 2}px)`; fireB.style.bottom = `calc(var(--safe-b) + ${R * 2 + 52}px)`; }
+  gR.style.right = `calc(var(--safe-r) + ${land ? 14 : 10}px)`; gR.style.bottom = `calc(var(--safe-b) + ${R * 2 + 56 + (land ? 0 : fs + 12)}px)`;
   gL.style.left = `calc(var(--safe-l) + ${land ? 14 : 10}px)`; gL.style.bottom = `calc(var(--safe-b) + ${R * 2 + 56}px)`;
   actB.style.bottom = `calc(var(--safe-b) + ${land ? 24 : R * 2 + 64}px)`;
 }
@@ -432,6 +443,8 @@ $('gBack').onclick = () => {
   const net = G.mode !== 'local';
   if (!net) paused = true;
   panel(`<h3>${net ? (G.mode === 'host' ? 'Avsluta matchen för alla?' : 'Lämna matchen?') : 'Paus ⏸️'}</h3>
+    <button class="btn white small" id="pAuto">🎯 Skjut med högra spaken: <b>${FIRE.auto ? 'PÅ' : 'AV'}</b></button>
+    <p class="note" style="margin:0">PÅ: drar du högra spaken långt skjuter du. AV: spaken siktar bara – skjut med 🔫-knappen.</p>
     ${net ? '' : '<button class="btn green" id="pNo">▶️ Fortsätt</button>'}
     <button class="btn pink ${net ? '' : 'small'}" id="pYes">🚪 ${net ? 'Ja' : 'Avsluta'}</button>${net ? '<button class="btn white small" id="pNo">Nej</button>' : ''}`);
   $('pYes').onclick = () => {
@@ -441,6 +454,7 @@ $('gBack').onclick = () => {
     else { G.game = null; show('menu'); }
   };
   $('pNo').onclick = () => { SFX.tap(); closePanel(); paused = false; };
+  $('pAuto').onclick = () => { SFX.tap(); FIRE.auto = !FIRE.auto; store.set('autofire', FIRE.auto); $('pAuto').querySelector('b').textContent = FIRE.auto ? 'PÅ' : 'AV'; };
 };
 
 /* ================= RITNING ================= */
@@ -920,10 +934,10 @@ function help() {
     🔵 <b>Blå laget</b> försvarar – och desarmerar 🔧 laddningen om den ligger ute.<br>
     Ett lag vinner också ronden om alla motståndare är utslagna. Tar tiden slut vinner blå.<br>
     🛒 <b>Köp</b> vapen, väst och granater i början av ronden. Pengar 💰 får du för träffar och ronder.<br>
-    👈 Vänster tumme: gå · 👉 Höger tumme: sikta – dra långt för att skjuta.<br>
+    👈 Vänster tumme: gå · 👉 Höger tumme: sikta – dra långt för att skjuta, eller håll in den röda 🔫 SKJUT-knappen (i pausmenyn kan du stänga av att spaken skjuter).<br>
     🔄 ladda om · 🔁 byt vapen · 💣 handgranat · 💨 rök (går inte att se igenom) · ⚡ bländgranat.<br>
     👀 Du ser bara det som syns från där du står – väggar och rök skymmer!<br>
-    🖥️ Dator: WASD går, musen siktar, klick skjuter, R laddar, Q byter, G/C/F granater, E (håll) lägger ut/desarmerar, B köper.</p>
+    🖥️ Dator: WASD går, musen siktar, klick eller mellanslag skjuter, R laddar, Q byter, G/C/F granater, E (håll) lägger ut/desarmerar, B köper.</p>
     <button class="btn green" id="pClose">👍 Kör!</button>`);
   $('pClose').onclick = () => { SFX.tap(); closePanel(); };
 }

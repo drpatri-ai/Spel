@@ -101,6 +101,9 @@ body{background:linear-gradient(170deg,#F2C66D 0%,#C8913A 45%,#5A3B14 100%)}
 #actB .pg{display:block;height:6px;border-radius:3px;background:#0002;margin-top:4px;overflow:hidden}
 #actB .pg i{display:block;height:100%;background:#FF3B30;width:0}
 #buyB{background:#8BE07A}
+#fireB{position:absolute;z-index:4;width:clamp(74px,18vmin,96px);height:clamp(74px,18vmin,96px);font-size:clamp(28px,7vmin,38px);background:radial-gradient(#FF8A80,#FF3B30);box-shadow:0 5px 0 #9E1B1B;display:flex;flex-direction:column;gap:0;line-height:1}
+#fireB span{font-size:11px;font-weight:700;color:#fff;letter-spacing:.5px}
+#fireB.on{transform:translateY(3px) scale(.95);box-shadow:0 2px 0 #9E1B1B}
 .bigtxt{position:absolute;left:0;right:0;top:30%;text-align:center;font-weight:700;color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;
   text-shadow:0 6px 0 var(--ink);pointer-events:none;z-index:5;font-size:clamp(32px,9vmin,80px);line-height:1.05}
 .bigtxt small{display:block;font-size:.42em;-webkit-text-stroke:3px var(--ink)}
@@ -181,6 +184,7 @@ body{background:linear-gradient(170deg,#F2C66D 0%,#C8913A 45%,#5A3B14 100%)}
     <div class="gbrow"><button class="gb" id="bSwap">🔁</button><button class="gb" id="bReload">🔄</button></div>
   </div>
   <div class="gbtns" id="gL"><button class="gb" id="buyB">🛒</button></div>
+  <button class="gb" id="fireB">🔫<span>SKJUT</span></button>
   <button id="actB" class="hidden"><span id="actT">💣 Håll för att lägga ut</span><span class="pg"><i id="actP"></i></span></button>
   <div class="hint" id="hint">Vänster tumme: gå · Höger tumme: sikta och skjut</div>
   <div class="bigtxt hidden" id="big"></div>

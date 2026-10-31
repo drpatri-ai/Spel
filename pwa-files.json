@@ -1,5 +1,5 @@
 {
- "version": "a877b448d4df",
+ "version": "bff18048470b",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -119,6 +119,7 @@
   "schack/app.js",
   "schack/engine.js",
   "shared/core.js",
+  "shared/hs.js",
   "shared/net.js",
   "shared/peerjs.min.js",
   "shared/style.css",

@@ -461,6 +461,7 @@ async function showResult() {
   if (mine) {
     const xp = xpFor(mine, won, s), coins = 10 + mine.kills * 8 + (mine.caps || 0) * 20 + mine.crates * 2 + (won ? 30 : 0);
     const lv = addXp(mine.ch, xp), f = figOf(mine.ch);
+    hsAdd('tankKills', mine.kills);
     f.coins += coins; PROF.set(prof);
     xpHTML = `<div class="xpl">${avHTML(mine.ch)}<div style="flex:1"><b>${esc(mine.name)} +${xp} XP · +${coins} 🪙</b>${lv ? ' <span class="lvup">NIVÅ UPP! 🎉</span>' : ''}
       <div class="xpbar"><i style="width:${f.lvl >= LVL_MAX ? 100 : f.xp / xpNeed(f.lvl) * 100}%"></i><span>Nivå ${f.lvl}</span></div></div></div>

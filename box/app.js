@@ -354,6 +354,7 @@ function xpAward(R, w) {
   let html = '', up = false;
   for (const i of mine) {
     const ch = G.chs[i], won = i === w, o = R.b[1 - i], me = R.b[i];
+    if (won) hsAdd('boxWins', 1);
     let xp = (won ? 60 : 20) + me.landed * 2 + o.kd * 15;
     if (G.mode === 'ai') { xp += G.opts.lv * 4; if (won && G.opts.ladder != null) xp += (G.opts.ladder + 1) * 10; }
     if (G.mode === 'host' || G.mode === 'client') xp += 20;

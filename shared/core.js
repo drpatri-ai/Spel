@@ -85,6 +85,17 @@ const CORE_SFX = {
   bonk: () => tone(150, .12, { type: 'square', vol: .05, to: 110 })
 };
 
+/* ---------- topplistans räknare (sparas i appen så att de följer med även i nätverksmatcher) ---------- */
+function hsCounters() {
+  try { if (window.Android && Android.profGet) { const r = Android.profGet('hs'); if (r) return JSON.parse(r) || {}; } } catch (e) { }
+  return shared.get('hs', {}) || {};
+}
+function hsAdd(k, n) {
+  const c = hsCounters(); c[k] = (c[k] | 0) + (n | 0);
+  try { if (window.Android && Android.profSet) Android.profSet('hs', JSON.stringify(c)); } catch (e) { }
+  shared.set('hs', c);
+}
+
 /* ---------- navigering mellan spelen ---------- */
 function goHub() { location.href = 'index.html'; }
 /* nätverksmatcher annonseras med prefix (krock:, studs:, box:) – fotboll utan – så att "Gå med" öppnar rätt spel */

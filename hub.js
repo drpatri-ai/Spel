@@ -35,6 +35,7 @@ function show(id) {
   if (id === 'hub') buildHub();
   if (id === 'chars') buildChars();
   if (id === 'settings') buildSet();
+  if (id === 'top') buildTop();
 }
 
 function buildHub() {
@@ -62,11 +63,103 @@ function buildChars() {
   bindCharEditor($('charList'), buildChars);
 }
 function buildSet() {
-  $('setList').innerHTML = soundRowsHTML();
+  const me = hsPlayer();
+  const app = !!(window.Android && Android.checkUpdate);
+  let ver = ''; try { if (app) ver = JSON.parse(Android.appVersion()).name; } catch (e) { }
+  $('setList').innerHTML = `<div class="row"><span style="font-size:28px">👤</span><div style="flex:1"><b>Ditt namn i topplistan</b><p class="small-note">${me ? esc(me.name) : 'Inte valt'}</p></div><button class="btn white small" id="setName">✏️ Ändra</button></div>
+    ${app ? `<div class="row"><span style="font-size:28px">📲</span><div style="flex:1"><b>Appen</b><p class="small-note" id="verNote">Version ${esc(ver)}</p></div><button class="btn green small" id="setUpd">🔄 Uppdatera</button></div>` : ''}` + soundRowsHTML();
   bindSoundRows($('setList'));
+  $('setName').onclick = () => { CORE_SFX.tap(); askName(true); };
+  if ($('setUpd')) $('setUpd').onclick = () => { CORE_SFX.tap(); $('verNote').textContent = 'Söker efter ny version…'; checkUpdate(true); };
 }
 
+/* ---------- namn till topplistan (frågas första gången) ---------- */
+function askName(canCancel) {
+  const me = hsPlayer();
+  let ch = shared.get('hsCh', 0) | 0;
+  $('panel').innerHTML = `<h3>👋 Vad heter du?</h3><p>Namnet syns i topplistan för alla som har spelet.</p>
+    <input id="nameIn" class="nameIn" type="text" maxlength="16" autocomplete="off" placeholder="Ditt namn" value="${me ? esc(me.name) : ''}">
+    <p style="font-size:15px">Välj din bild:</p><div class="figpick" id="figPick">${CHARS.map((_, i) => `<button data-i="${i}" class="${i === ch ? 'on' : ''}">${avHTML(i)}</button>`).join('')}</div>
+    <button class="btn green" id="nameOk">✅ Klar</button>${canCancel ? '<button class="btn white small" id="nameNo">Avbryt</button>' : ''}`;
+  $('overlay').classList.add('on');
+  $('figPick').querySelectorAll('button').forEach(b => b.onclick = () => { ch = +b.dataset.i; $('figPick').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); CORE_SFX.pick(); });
+  const ok = () => {
+    const v = $('nameIn').value.trim();
+    if (!v) { $('nameIn').style.borderColor = '#FF4D6D'; CORE_SFX.bonk(); return; }
+    hsSetPlayer(v); shared.set('hsCh', ch); shared.set('hsSent', '');
+    $('overlay').classList.remove('on'); CORE_SFX.pick();
+    if (current === 'settings') buildSet();
+    hsSync(true);
+  };
+  $('nameOk').onclick = ok; $('nameIn').onkeydown = e => { if (e.key === 'Enter') ok(); };
+  if ($('nameNo')) $('nameNo').onclick = () => $('overlay').classList.remove('on');
+  setTimeout(() => $('nameIn').focus(), 150);
+}
+
+/* ---------- topplistan ---------- */
+const fmtN = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+async function buildTop() {
+  $('topList').innerHTML = `<p class="tnote">🏆 Hämtar topplistan…</p>`;
+  await hsSync();
+  const all = await hsFetchAll();
+  if (current !== 'top') return;
+  if (!all) { $('topList').innerHTML = `<p class="tnote">😕 Kunde inte hämta topplistan. Är du uppkopplad till internet? Tryck 🔄 för att försöka igen.</p>`; return; }
+  const me = hsPlayer();
+  // mina siffror direkt från enheten (även om de inte hunnit skickas)
+  if (me) { const mine = all.find(d => d.id === me.id); const s = hsCollect(); if (mine) mine.s = s; else all.push({ id: me.id, name: me.name, ch: shared.get('hsCh', 0), s }); }
+  const medal = ['🥇', '🥈', '🥉'];
+  const cards = HS_CATS.map(c => {
+    const list = all.filter(d => (d.s[c.k] | 0) > 0).sort((a, b) => b.s[c.k] - a.s[c.k]);
+    if (!list.length) return '';
+    const top = list.slice(0, 5), mi = me ? list.findIndex(d => d.id === me.id) : -1;
+    const row = (d, i) => `<div class="trow ${me && d.id === me.id ? 'me' : ''}"><span class="m">${medal[i] || (i + 1) + '.'}</span>${avHTML(Math.abs(d.ch | 0) % CHARS.length)}<span>${esc(String(d.name).slice(0, 16))}</span><b>${fmtN(d.s[c.k] | 0)} ${c.u}</b></div>`;
+    return `<div class="tcard"><h4>${c.ic} ${c.n}</h4>${top.map(row).join('')}${mi >= 5 ? row(list[mi], mi) : ''}</div>`;
+  }).join('');
+  $('topList').innerHTML = (cards || `<p class="tnote">Ingen har några rekord än – spela så hamnar du här! 🎮</p>`) +
+    `<p class="tnote" style="font-size:14px;opacity:.85">${all.length} spelare · Listan uppdateras när man öppnar startsidan</p>`;
+}
+
+/* ---------- uppdatera appen ---------- */
+const UPDATE_URL = 'https://github.com/drpatri-ai/Spel/releases/download/app/version.json';
+let upInfo = null, upManual = false;
+function checkUpdate(manual) {
+  if (!(window.Android && Android.checkUpdate)) return;
+  upManual = !!manual;
+  Android.checkUpdate(UPDATE_URL + '?t=' + Date.now());
+}
+window.onUpdateInfo = info => {
+  let cur = 0; try { cur = JSON.parse(Android.appVersion()).code; } catch (e) { }
+  const newer = info && info.code > cur && info.url;
+  if ($('verNote')) $('verNote').textContent = !info ? 'Kunde inte söka – är du uppkopplad?' : newer ? `Ny version ${info.name} finns!` : 'Du har den senaste versionen ✅';
+  if (newer) { upInfo = info; showUpBar(); if (upManual) startUpdate(); }
+};
+function showUpBar() {
+  if ($('upbar') || !upInfo) return;
+  const d = document.createElement('div'); d.className = 'upbar'; d.id = 'upbar';
+  d.innerHTML = `<span>🎉 Ny version ${esc(upInfo.name)}!</span><button class="btn green" id="upGo">🔄 Uppdatera</button><button class="btn white small" id="upNo" style="padding:6px 10px">✖</button>`;
+  document.body.appendChild(d);
+  $('upGo').onclick = () => { CORE_SFX.tap(); startUpdate(); };
+  $('upNo').onclick = () => d.remove();
+}
+function startUpdate() {
+  if (!upInfo) return;
+  $('panel').innerHTML = `<h3>📲 Uppdaterar…</h3><p id="upMsg">Laddar ner version ${esc(upInfo.name)}</p><div class="upprog" style="height:18px;border-radius:9px;background:#E4E0F7;overflow:hidden;width:100%"><i id="upBar" style="display:block;height:100%;width:0;background:linear-gradient(90deg,#34C759,#FFD23F)"></i></div>
+    <button class="btn white small" id="upClose">Stäng</button>`;
+  $('overlay').classList.add('on');
+  $('upClose').onclick = () => $('overlay').classList.remove('on');
+  Android.installUpdate(upInfo.url);
+}
+window.onUpdateProgress = p => {
+  if (!$('upMsg')) return;
+  if (p === -2) { $('upMsg').innerHTML = 'Första gången måste du tillåta att <b>Bucinca Spel</b> får installera appar.<br>Slå på det i rutan som öppnades, gå tillbaka hit och tryck <b>🔄 Uppdatera</b> igen.'; return; }
+  if (p === -1) { $('upMsg').textContent = '😕 Nedladdningen misslyckades. Kolla internet och försök igen.'; return; }
+  $('upBar').style.width = p + '%';
+  if (p >= 100) $('upMsg').textContent = '✅ Klart! Tryck "Uppdatera" i rutan som Android visar. Dina rekord och inställningar finns kvar.';
+};
+
 $('toChars').onclick = () => { CORE_SFX.tap(); show('chars'); };
+$('toTop').onclick = () => { CORE_SFX.tap(); show('top'); };
+$('topRe').onclick = () => { CORE_SFX.tap(); shared.set('hsSent', ''); buildTop(); };
 $('toSettings').onclick = () => { CORE_SFX.tap(); show('settings'); };
 // internetmatch: skriv värdens kod så öppnas rätt spel
 $('toCode').onclick = () => {
@@ -94,3 +187,5 @@ window.onBack = function () {
 
 bubbles();
 buildHub();
+if (!hsPlayer()) setTimeout(() => askName(false), 600); else hsSync();
+setTimeout(() => checkUpdate(false), 1500);

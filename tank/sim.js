@@ -203,7 +203,7 @@
       if (!t.alive) {
         if (t.out) return;
         t.resp -= dt;
-        if (t.resp <= 0 && (this.opt.mode === 'ffa' || t.lives > 0)) this.spawn(t, false);
+        if (t.resp <= 0 && (this.opt.mode !== 'mission' || t.lives > 0)) this.spawn(t, false);   // liv räknas bara i uppdrag
         return;
       }
       t.reload -= dt; t.cd -= dt; t.shield = Math.max(0, t.shield - dt); t.turbo = Math.max(0, t.turbo - dt); t.boost = Math.max(0, t.boost - dt); t.triple = Math.max(0, t.triple - dt);

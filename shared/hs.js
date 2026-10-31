@@ -1,10 +1,8 @@
 /* Bucinca Spel – gemensam topplista för alla som har appen (eller webbversionen).
-   Varje spelare (namnet man skriver när appen startas första gången) har ett eget dokument hos textdb.dev
-   och ett gemensamt register listar alla spelare. Siffrorna räknas fram ur spelens egna sparade rekord.
-   Byt tjänst? Ändra HS_URL och hsGet/hsPut nedan. */
+   Varje spelare (namnet man skriver när appen startas första gången) har ett eget dokument som sparas kvar hos
+   öppna MQTT-förmedlare (se shared/net.js). Siffrorna räknas fram ur spelens egna sparade rekord. */
 'use strict';
 const HS_NS = 'bucinca-spel-hs-7c41e9d2';
-const HS_URL = id => `https://textdb.dev/api/data/${HS_NS}-${id}`;
 
 /* ---------- spelaren på den här enheten ---------- */
 function hsPlayer() { return shared.get('player', null); }
@@ -60,37 +58,47 @@ function hsCollect() {
   return S;
 }
 
-/* ---------- HTTP (i appen via Android för att slippa CORS) ---------- */
-let _hsSeq = 0; const _hsWait = {};
-window.onHttp = (id, status, text) => { const f = _hsWait[id]; delete _hsWait[id]; if (f) f({ status, text }); };
-function hsHttp(method, url, body) {
-  if (window.Android && Android.http) return new Promise(res => { const id = ++_hsSeq; _hsWait[id] = res; setTimeout(() => { if (_hsWait[id]) { delete _hsWait[id]; res({ status: 0, text: '' }); } }, 20000); Android.http(id, method, url, body == null ? null : body, 'application/json'); });
-  return fetch(url, { method, headers: body != null ? { 'content-type': 'application/json', accept: 'application/json' } : { accept: 'application/json' }, body: body == null ? undefined : body, cache: 'no-store' })
-    .then(r => r.text().then(text => ({ status: r.status, text }))).catch(() => ({ status: 0, text: '' }));
+/* ---------- lagring: kvarhållna meddelanden hos de öppna MQTT-förmedlarna (samma som internetmatchen) ----------
+   Varje spelare skriver sitt dokument till alla förmedlare; listan läser från alla och tar det nyaste per spelare.
+   Försvinner något hos en förmedlare skrivs det tillbaka nästa gång spelaren öppnar startsidan. */
+const HS_TOPIC = id => `bsphs/${HS_NS.slice(-8)}/p/${id}`;
+function hsBrokers(fn, wait) {
+  // kör fn(mqtt) mot varje förmedlare som går att nå; svarar med antal som lyckades
+  return new Promise(res => {
+    let left = NET_BROKERS.length, ok = 0;
+    const done = () => { if (--left === 0) res(ok); };
+    for (const url of NET_BROKERS) {
+      let fin = false;
+      const m = new Mqtt(url);
+      const end = () => { if (fin) return; fin = true; try { m.end(); } catch (e) { } done(); };
+      const to = setTimeout(end, 7000);
+      m.onclose = () => { clearTimeout(to); end(); };
+      m.onopen = () => { ok++; fn(m); setTimeout(() => { clearTimeout(to); end(); }, wait); };
+    }
+  });
 }
-async function hsGet(id) { const r = await hsHttp('GET', HS_URL(id)); if (r.status !== 200 || !r.text) return { ok: r.status === 200 || r.status === 404, v: null }; try { return { ok: true, v: JSON.parse(r.text) }; } catch (e) { return { ok: true, v: null }; } }
-async function hsPut(id, v) { const r = await hsHttp('POST', HS_URL(id), JSON.stringify(v)); return r.status >= 200 && r.status < 300; }
-
-/* skicka mina siffror (när något ändrats) och se till att jag finns i registret */
+/* skicka mina siffror (när något ändrats eller en gång per dygn) */
 async function hsSync(force) {
   const me = hsPlayer(); if (!me) return false;
   const s = hsCollect();
   const doc = { id: me.id, name: me.name, ch: shared.get('hsCh', 0) | 0, s, t: Date.now() };
   const sig = JSON.stringify([me.name, doc.ch, s]);
   if (!force && shared.get('hsSent', '') === sig && Date.now() - shared.get('hsT', 0) < 864e5) return true;
-  if (!await hsPut('p-' + me.id, doc)) return false;
-  const idx = await hsGet('index');
-  if (!idx.ok) return false;
-  const ids = (idx.v && Array.isArray(idx.v.ids)) ? idx.v.ids : [];
-  if (!ids.includes(me.id)) { ids.push(me.id); if (!await hsPut('index', { ids: ids.slice(-200) })) return false; }
+  const n = await hsBrokers(m => m.pub(HS_TOPIC(me.id), JSON.stringify(doc), true), 600);
+  if (!n) return false;
   shared.set('hsSent', sig); shared.set('hsT', Date.now());
   return true;
 }
-/* hämta alla spelare */
+/* hämta alla spelare (nyaste dokumentet per spelare från alla förmedlare) */
 async function hsFetchAll() {
-  const idx = await hsGet('index');
-  if (!idx.ok) return null;
-  const ids = (idx.v && Array.isArray(idx.v.ids)) ? idx.v.ids.slice(-200) : [];
-  const docs = await Promise.all(ids.map(id => hsGet('p-' + id).then(r => r.v).catch(() => null)));
-  return docs.filter(d => d && d.id && d.name && d.s);
+  const all = {};
+  const n = await hsBrokers(m => {
+    m.onmsg = (topic, msg) => {
+      if (!msg) return;
+      try { const d = JSON.parse(msg); if (d && d.id && d.name && d.s && (!all[d.id] || (d.t | 0) > (all[d.id].t | 0))) all[d.id] = d; } catch (e) { }
+    };
+    m.sub(HS_TOPIC('+'));
+  }, 2500);
+  if (!n) return null;
+  return Object.values(all);
 }

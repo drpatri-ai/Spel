@@ -8,7 +8,10 @@ const HOSTPAGE = REMOTE && Q.get('host') === '1';
 const CLIENT = REMOTE && !HOSTPAGE;
 const APP_HOME = 'https://appassets.androidplatform.net/assets/';
 const canHost = () => !!(window.Android && Android.netHost);
-const { MODELS, SPECIAL, MAPS, W: WW, H: WH } = TK;
+const { MODELS, SPECIAL, MAPS, WEAPONS, WEAPON_IDS, W: WW, H: WH } = TK;
+const TEAMC = ['#FF3B30', '#2F7BFF'], TEAMN = ['Röda laget', 'Blå laget'];
+const teamMode = s => s && (s.mode === 'tdm' || s.mode === 'ctf' || s.mode === 'mission');
+const WCOST = l => 60 + l * 60;   // mynt för nästa vapennivå
 const MODEL_IDS = ['bjorn', 'vessla', 'mammut', 'drake'];
 
 const SFX = Object.assign({}, CORE_SFX, {
@@ -35,7 +38,7 @@ const FACES = CHARS.map((_, i) => { const im = new Image(); im.src = avatarSrc(i
 const UPG = [
   { k: 'arm', ic: '🛡️', n: 'Pansar', d: 'Mer liv' },
   { k: 'eng', ic: '⚙️', n: 'Motor', d: 'Kör fortare' },
-  { k: 'gun', ic: '💥', n: 'Kanon', d: 'Mer skada per skott' },
+  { k: 'gun', ic: '💪', n: 'Slagkraft', d: 'Mer skada med alla vapen' },
   { k: 'rel', ic: '⏱️', n: 'Laddning', d: 'Skjuter oftare' },
   { k: 'vel', ic: '🎯', n: 'Kulfart', d: 'Snabbare kulor – lättare att träffa' },
   { k: 'spc', ic: '✨', n: 'Special', d: 'Specialförmågan laddas snabbare' }
@@ -54,6 +57,8 @@ const PROF = {
 let prof = PROF.get();
 function figOf(ch) {
   const f = prof.figs[ch] || (prof.figs[ch] = { lvl: 1, xp: 0, up: {}, model: 'bjorn' });
+  f.coins = Math.max(0, f.coins | 0); f.wl = f.wl || {}; for (const w of WEAPON_IDS) f.wl[w] = Math.max(0, Math.min(5, f.wl[w] | 0));
+  if (!WEAPONS[f.weapon] || WEAPONS[f.weapon].lvl > f.lvl) f.weapon = 'kanon';
   f.lvl = Math.max(1, Math.min(LVL_MAX, f.lvl | 0)); f.xp = Math.max(0, f.xp | 0); f.up = TK.cleanUp(f.up);
   if (!MODELS[f.model] || MODELS[f.model].lvl > f.lvl) f.model = 'bjorn';
   return f;
@@ -67,7 +72,10 @@ function addXp(ch, n) {
   PROF.set(prof);
   return f.lvl - before;
 }
-const myTankSpec = ch => { const f = figOf(ch); return { ch, name: charName(ch), model: f.model, up: f.up }; };
+const myTankSpec = ch => { const f = figOf(ch); return { ch, name: charName(ch), model: f.model, up: f.up, weapon: f.weapon, wlvl: f.wl[f.weapon] }; };
+// datorns vapen: något som en förare på den nivån kunde ha låst upp
+function botWeapon(lv, r) { const ok = WEAPON_IDS.filter(w => WEAPONS[w].lvl <= lv + 2); return ok[Math.floor((r ? r() : Math.random()) * ok.length)]; }
+const botSpec = (id, ch, lv, extra) => Object.assign({ id, name: charName(ch), ch, model: pick(MODEL_IDS), bot: lv, up: TK.botUp(lv), weapon: botWeapon(lv), wlvl: Math.floor(lv / 2) }, extra || {});
 
 /* ---------- skärmar ---------- */
 let current = 'menu';
@@ -94,7 +102,7 @@ function buildMenu() {
   const f = figOf(ME.ch);
   $('meCard').setAttribute('style', styleOf(ME.ch));
   $('meCard').innerHTML = `${avHTML(ME.ch)}<div style="text-align:left"><small>Förare (tryck för att byta)</small><b>${esc(charName(ME.ch))}</b>
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:3px"><span class="chip">Nivå ${f.lvl}</span><span class="chip">${MODELS[f.model].name}</span>${freePts(f) > 0 ? '<span class="chip" style="background:#34C759;color:#fff">⬆️ Uppgradera!</span>' : ''}</div></div>`;
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:3px"><span class="chip">Nivå ${f.lvl}</span><span class="chip">${MODELS[f.model].name}</span><span class="chip">${WEAPONS[f.weapon].ic} ${WEAPONS[f.weapon].name}</span><span class="chip">🪙 ${f.coins}</span>${freePts(f) > 0 ? '<span class="chip" style="background:#34C759;color:#fff">⬆️ Uppgradera!</span>' : ''}</div></div>`;
   $('toHost').classList.toggle('hidden', !canHost());
 }
 function pickFigure(title, done, back) {
@@ -119,6 +127,12 @@ function buildGarage() {
     <div class="gar">
     <div class="card"><h4>🪖 Välj vagn</h4><div class="models">${MODEL_IDS.map(id => { const m = MODELS[id], lock = m.lvl > f.lvl;
       return `<button class="mdl ${f.model === id ? 'on' : ''} ${lock ? 'lock' : ''}" data-m="${id}">${lock ? `<span class="lk">🔒 Nivå ${m.lvl}</span>` : ''}<canvas width="150" height="115" data-pv="${id}"></canvas><b>${m.name}</b><small>${m.desc}</small>${ms(id)}</button>`; }).join('')}</div></div>
+    <div class="card"><h4>🔫 Vapen <span class="chip" style="float:right">🪙 ${f.coins} mynt</span></h4>
+      <p class="note">Välj vapen och uppgradera det med mynt. Mynt får du i varje match.</p>
+      <div class="upl">${WEAPON_IDS.map(id => { const w = WEAPONS[id], lock = w.lvl > f.lvl, l = f.wl[id], cost = WCOST(l);
+        return `<div class="upr wpn ${f.weapon === id ? 'on' : ''} ${lock ? 'lock' : ''}" data-w="${id}"><span class="ic">${w.ic}</span><div class="grow"><b>${w.name}</b> <span class="pips">${'●'.repeat(l)}${'○'.repeat(5 - l)}</span>
+          <small>${lock ? `🔒 Låses upp på nivå ${w.lvl}` : w.desc} · 💥 ${Math.round(w.dmg * w.n * (1 + l * .1))} · ⏱️ ${(1 / (w.rel * (1 - l * .05))).toFixed(1)}/s</small></div>
+          ${lock ? '' : l < 5 ? `<button class="btn ${f.coins >= cost ? 'green' : 'white'} small wb" data-b="${id}" ${f.coins >= cost ? '' : 'disabled'}>⬆️ ${cost}🪙</button>` : '<span class="chip">MAX</span>'}</div>`; }).join('')}</div></div>
     <div class="card"><h4>${pts > 0 ? `⬆️ ${pts} poäng att fördela` : 'Inga poäng kvar – spela för mer XP!'}</h4>
       <p class="note">Varje ny nivå ger 1 poäng. Uppgraderingarna gäller alla vagnar för ${esc(charName(ME.ch))}.</p>
       <div class="upl">${UPG.map(u => `<div class="upr"><span class="ic">${u.ic}</span><div class="grow"><b>${u.n}</b> <span class="pips">${pip(f.up[u.k])}</span><small>${u.d}</small></div>
@@ -129,6 +143,18 @@ function buildGarage() {
     const ff = figOf(ME.ch), id = b.dataset.m;
     if (MODELS[id].lvl > ff.lvl) { SFX.bonk(); return; }
     ff.model = id; PROF.set(prof); SFX.pick(); buildGarage();
+  });
+  $('garBox').querySelectorAll('.wpn').forEach(el => el.onclick = e => {
+    if (e.target.closest('[data-b]')) return;
+    const ff = figOf(ME.ch), id = el.dataset.w;
+    if (WEAPONS[id].lvl > ff.lvl) { SFX.bonk(); return; }
+    ff.weapon = id; PROF.set(prof); SFX.pick(); buildGarage();
+  });
+  $('garBox').querySelectorAll('[data-b]').forEach(b => b.onclick = e => {
+    e.stopPropagation();
+    const ff = figOf(ME.ch), id = b.dataset.b, l = ff.wl[id], cost = WCOST(l);
+    if (l >= 5 || ff.coins < cost) { SFX.bonk(); return; }
+    ff.coins -= cost; ff.wl[id]++; PROF.set(prof); SFX.pick(); buzz(20); buildGarage();
   });
   $('garBox').querySelectorAll('[data-k]').forEach(b => b.onclick = () => {
     const ff = figOf(ME.ch); if (freePts(ff) <= 0 || ff.up[b.dataset.k] >= UPG_MAX) return;
@@ -165,32 +191,46 @@ function buildMissions() {
 function startMission(i) {
   const M = mission(i);
   const pl = [Object.assign(myTankSpec(ME.ch), { id: 'me', team: 0, lives: 3 })];
-  M.foes.forEach((f, k) => pl.push({ id: 'e' + k, name: charName(f.ch), ch: f.ch, model: f.model, boss: f.boss, bot: f.bot, up: TK.botUp(f.bot), team: 1, lives: 1 }));
+  const wr = TK.RNG(500 + i);
+  M.foes.forEach((f, k) => pl.push({ id: 'e' + k, name: charName(f.ch), ch: f.ch, model: f.model, boss: f.boss, bot: f.bot, up: TK.botUp(f.bot), team: 1, lives: 1, weapon: f.boss ? 'raket' : botWeapon(f.bot, wr), wlvl: Math.floor(f.bot / 2) }));
   G.mode = 'local'; G.kind = 'mission'; G.mis = i;
   begin(new TK.Game(pl, { map: M.map, mode: 'mission', time: 0 }), 'me');
 }
 
 /* ---------- snabbmatch ---------- */
-const QS = Object.assign({ bots: 3, diff: 1, map: 0, kl: 10 }, store.get('qs', {}));
+const QS = Object.assign({ bots: 3, diff: 1, map: 0, kl: 1, mode: 'ffa' }, store.get('qs', {}));
+const MODES = [['ffa', 'Alla mot alla'], ['tdm', 'Lagmatch'], ['ctf', 'Fånga flaggan']];
+const LIMITS = { ffa: [5, 10, 15], tdm: [10, 15, 25], ctf: [1, 3, 5] };
+const LIMIT_TXT = { ffa: 'träffar', tdm: 'lagträffar', ctf: 'flaggor' };
+if (QS.kl > 2) QS.kl = 1;
+const limitOf = (mode, i) => LIMITS[mode][Math.max(0, Math.min(2, i | 0))];
 const DIFF = [{ n: 'Lätt', lv: 2 }, { n: 'Medel', lv: 5 }, { n: 'Svår', lv: 8 }, { n: 'Proffs', lv: 10 }];
 function seg(id, vals, cur, label) { return `<div class="opt"><b>${label}</b><div class="seg" data-s="${id}">${vals.map(v => `<button data-v="${v[0]}" class="${String(v[0]) === String(cur) ? 'on' : ''}">${v[1]}</button>`).join('')}</div></div>`; }
+const segVal = (b) => isNaN(+b.dataset.v) ? b.dataset.v : +b.dataset.v;
 function buildQuick() {
-  $('qBox').innerHTML = `<div class="card"><h4>Alla mot alla – först till flest träffar vinner</h4><div class="opts">
-    ${seg('bots', [[1, '1'], [2, '2'], [3, '3'], [4, '4'], [5, '5']], QS.bots, '🤖 Motståndare')}
+  const team = QS.mode !== 'ffa';
+  $('qBox').innerHTML = `<div class="card"><h4>${QS.mode === 'ffa' ? 'Alla mot alla – flest träffar vinner' : QS.mode === 'tdm' ? 'Lagmatch – ditt lag mot datorns lag' : 'Fånga flaggan – hämta fiendens flagga till din bas!'}</h4><div class="opts">
+    ${seg('mode', MODES, QS.mode, '🎮 Läge')}
+    ${seg('bots', [1, 2, 3, 4, 5, 7].map(n => [n, String(n)]), QS.bots, team ? '🤖 Datorvagnar' : '🤖 Motståndare')}
     ${seg('diff', DIFF.map((d, i) => [i, d.n]), QS.diff, '⭐ Svårighet')}
     ${seg('map', MAPS.map((m, i) => [i, m.name]), QS.map, '🗺️ Bana')}
-    ${seg('kl', [[5, '5'], [10, '10'], [15, '15']], QS.kl, '🎯 Vinst vid')}
-    </div><button class="btn green" id="qGo">⚔️ Kör!</button></div>`;
-  $('qBox').querySelectorAll('.seg button').forEach(b => b.onclick = () => { QS[b.parentNode.dataset.s] = +b.dataset.v; store.set('qs', QS); SFX.tap(); buildQuick(); });
+    ${seg('kl', LIMITS[QS.mode].map((v, i) => [i, String(v)]), QS.kl, `🎯 ${LIMIT_TXT[QS.mode]}`)}
+    </div>${team ? `<p class="note">Du är i ${TEAMN[0].toLowerCase()} 🔴. Datorvagnarna delas upp så att lagen blir lika stora.</p>` : ''}<button class="btn green" id="qGo">⚔️ Kör!</button></div>`;
+  $('qBox').querySelectorAll('.seg button').forEach(b => b.onclick = () => { QS[b.parentNode.dataset.s] = segVal(b); store.set('qs', QS); SFX.tap(); buildQuick(); });
   $('qGo').onclick = () => { SFX.tap(); startQuick(); };
 }
 function startQuick() {
-  const pl = [Object.assign(myTankSpec(ME.ch), { id: 'me' })];
+  const pl = [Object.assign(myTankSpec(ME.ch), { id: 'me', team: 0 })];
   const others = CHARS.map((_, k) => k).filter(k => k !== ME.ch).sort(() => Math.random() - .5);
   const lv = DIFF[QS.diff].lv;
-  for (let k = 0; k < QS.bots; k++) { const ch = others[k % others.length]; pl.push({ id: 'b' + k, name: charName(ch), ch, model: pick(MODEL_IDS), bot: lv, up: TK.botUp(lv) }); }
+  for (let k = 0; k < QS.bots; k++) {
+    const ch = others[k % others.length];
+    const n0 = pl.filter(p => p.team === 0).length, n1 = pl.filter(p => p.team === 1).length;
+    pl.push(botSpec('b' + k, ch, lv, { team: QS.mode === 'ffa' ? 0 : (n1 <= n0 ? 1 : 0) }));
+  }
   G.mode = 'local'; G.kind = 'quick';
-  begin(new TK.Game(pl, { map: QS.map, mode: 'ffa', killLimit: QS.kl, time: 180 }), 'me');
+  const lim = limitOf(QS.mode, QS.kl);
+  begin(new TK.Game(pl, { map: QS.map, mode: QS.mode, killLimit: lim, capLimit: lim, time: QS.mode === 'ffa' ? 180 : 300 }), 'me');
 }
 
 /* ================= MATCHEN ================= */
@@ -259,7 +299,7 @@ function readInput() {
     if (me && me.al) {
       const aim = Math.atan2(out.ay, out.ax); let best = null, bd = .3;
       for (const t of G.snap.T) {
-        if (!t.al || t.id === G.me || (G.snap.mode === 'mission' && t.tm === me.tm)) continue;
+        if (!t.al || t.id === G.me || (teamMode(G.snap) && t.tm === me.tm)) continue;
         const d = Math.hypot(t.x - me.x, t.y - me.y); if (d > 800) continue;
         const da = Math.abs(angD(aim, Math.atan2(t.y - me.y, t.x - me.x))); if (da < bd) { bd = da; best = t; }
       }
@@ -320,14 +360,21 @@ const angD = (a, b) => { let d = b - a; while (d > Math.PI) d -= 2 * Math.PI; wh
 function updHud(s) {
   const me = s.T.find(t => t.id === G.me);
   if (me) {
-    $('mebox').innerHTML = `${avHTML(me.ch)}<div><b>${esc(me.n)} ${s.mode === 'mission' ? '❤️'.repeat(Math.max(0, me.al ? me.lv : me.lv)) : `🎯 ${me.k}`}</b><div class="bar"><i style="width:${me.hp / me.mh * 100}%"></i></div></div>`;
+    $('mebox').innerHTML = `${avHTML(me.ch)}<div><b>${esc(me.n)} ${s.mode === 'mission' ? '❤️'.repeat(Math.max(0, me.lv)) : `🎯 ${me.k}`} ${WEAPONS[me.wp] ? WEAPONS[me.wp].ic : ''}${me.fl >= 0 ? ' 🚩' : ''}</b><div class="bar"><i style="width:${me.hp / me.mh * 100}%"></i></div></div>`;
+    if (teamMode(s) && s.mode !== 'mission') $('mebox').querySelector('.av').style.borderColor = TEAMC[me.tm & 1];
     const sp = SPECIAL[me.sp] || SPECIAL.shield, p = me.cdm ? Math.max(0, 1 - me.cd / me.cdm) : 1;
     $('spIc').textContent = sp.ic; $('spTx').textContent = sp.name;
     spBtn.style.setProperty('--p', Math.round(p * 100) + '%'); spBtn.classList.toggle('ready', me.cd <= 0);
     spBtn.classList.remove('hidden');
   } else { $('mebox').innerHTML = '<b>👀 Tittar på</b>'; spBtn.classList.add('hidden'); }
-  $('clock').innerHTML = s.mode === 'mission' ? `${s.T.filter(t => t.tm === 1 && (t.al || t.lv > 0)).length} 🎯<small>kvar</small>` : `${Math.floor(s.tm / 60)}:${String(s.tm % 60).padStart(2, '0')}<small>till ${s.kl}</small>`;
-  if (s.mode === 'ffa') {
+  const clk = `${Math.floor(s.tm / 60)}:${String(s.tm % 60).padStart(2, '0')}`;
+  $('clock').innerHTML = s.mode === 'mission' ? `${s.T.filter(t => t.tm === 1 && (t.al || t.lv > 0)).length} 🎯<small>kvar</small>`
+    : s.mode === 'ffa' ? `${clk}<small>till ${s.kl}</small>`
+    : `<span style="color:${TEAMC[0]}">${s.sc[0]}</span> – <span style="color:${TEAMC[1]}">${s.sc[1]}</span><small>${clk} · till ${s.mode === 'ctf' ? s.cl + ' 🚩' : s.kl}</small>`;
+  if (s.mode === 'tdm' || s.mode === 'ctf') {
+    const rows = s.T.filter(t => !t.out).sort((a, b) => a.tm - b.tm || b.k - a.k).slice(0, 8);
+    $('score').innerHTML = rows.map(t => `<div class="r ${t.id === G.me ? 'mine' : ''}"><span style="color:${TEAMC[t.tm & 1]}">●</span> ${esc(t.n)}${t.fl >= 0 ? ' 🚩' : ''} ${t.k}</div>`).join('');
+  } else if (s.mode === 'ffa') {
     const top = s.T.filter(t => !t.out).sort((a, b) => b.k - a.k || a.d - b.d).slice(0, 4);
     $('score').innerHTML = top.map(t => `<div class="r ${t.id === G.me ? 'mine' : ''}">${esc(t.n)} ${avHTML(t.ch)} ${t.k}</div>`).join('');
   } else $('score').innerHTML = `<div class="r">${MAPS[s.map].name}</div>`;
@@ -352,7 +399,8 @@ function handleEvents(s) {
     if (e.id <= G.lastEv) continue;
     G.lastEv = e.id;
     switch (e.e) {
-      case 'start': big(s.mode === 'mission' ? `Uppdrag ${G.mis + 1}` : MAPS[s.map].name, 1600, s.mode === 'mission' ? 'Förstör alla fiender!' : `Först till ${s.kl} träffar`); break;
+      case 'start': { const meT = s.T.find(t => t.id === G.me); big(s.mode === 'mission' ? `Uppdrag ${G.mis + 1}` : s.mode === 'ctf' ? 'Fånga flaggan! 🚩' : s.mode === 'tdm' ? 'Lagmatch! ⚔️' : MAPS[s.map].name, 1800,
+        s.mode === 'mission' ? 'Förstör alla fiender!' : s.mode === 'ctf' ? `${meT ? `Du är i ${TEAMN[meT.tm & 1].toLowerCase()} · ` : ''}först till ${s.cl} flaggor` : s.mode === 'tdm' ? `${meT ? `Du är i ${TEAMN[meT.tm & 1].toLowerCase()} · ` : ''}först till ${s.kl}` : `Först till ${s.kl} träffar`); break; }
       case 'go': SFX.go(); big('KÖR! 🪖', 800); break;
       case 'fire': { const n = nearOf(e.x, e.y); SFX.fire(n); FX.flash(e.x, e.y, e.a); if (e.t === G.me) FX.shake = Math.max(FX.shake, 3); break; }
       case 'hit': { const n = nearOf(e.x, e.y); SFX.hit(n); FX.spark(e.x, e.y, 8, '#FFD23F'); FX.text('-' + e.d, e.x, e.y - 40, e.t === G.me ? '#FF4D6D' : '#fff', 20); if (e.t === G.me) { FX.shake = 8; buzz(30); FX.red = .35; } break; }
@@ -364,6 +412,15 @@ function handleEvents(s) {
       case 'pick': SFX.pick(); FX.text(PICK_TXT[e.k] || '', e.x, e.y - 30, '#A8FFB8', 22); break;
       case 'special': { const sp = SPECIAL[e.s]; if (e.s === 'shield') SFX.shield(); else SFX.special(); if (e.t === G.me) FX.text(sp.ic + ' ' + sp.name + '!', e.x, e.y - 50, '#FFD23F', 24); break; }
       case 'spawn': FX.ring(e.x, e.y, '#fff'); break;
+      case 'flag': {
+        const who = s.T.find(t => t.id === e.t), myTm = (s.T.find(t => t.id === G.me) || { tm: -1 }).tm;
+        const fl = `<span style="color:${TEAMC[e.f]}">🚩</span>`, nm = who ? esc(who.n) : '';
+        if (e.a === 'take') { feed(`${nm} tog ${fl}`); SFX.special(); if (e.f === myTm) big('Vår flagga är tagen! 😱', 1300); else if (who && who.id === G.me) big('Du har flaggan! 🚩', 1300, 'Kör hem till din bas!'); }
+        else if (e.a === 'drop') feed(`${nm} tappade ${fl}`);
+        else if (e.a === 'ret') { feed(`${fl} tillbaka i basen`); SFX.pick(); }
+        else if (e.a === 'cap') { feed(`${nm} tog hem ${fl}! ⭐`); FX.ring(e.x, e.y, '#FFD23F'); if (who && who.tm === myTm) { SFX.win(); big('FLAGGA! 🚩⭐', 1500, `${TEAMN[who.tm & 1]} får poäng`); confetti(); } else { SFX.sad(); big('De tog vår flagga…', 1300); } }
+        break;
+      }
       case 'left': feed(`🚪 ${esc(e.n)} lämnade`); break;
       case 'kill': {
         SFX.boom(nearOf(e.x, e.y)); FX.boom(e.x, e.y, 90); FX.scorch(e.x, e.y);
@@ -374,8 +431,13 @@ function handleEvents(s) {
         break;
       }
       case 'end': {
-        const meWon = s.mode === 'mission' ? e.w === 'team0' : e.w === G.me;
-        if (meWon) { SFX.win(); confetti(); big(s.mode === 'mission' ? 'UPPDRAG KLART! 🎖️' : 'DU VANN! 🏆', 2200); }
+        const meT = s.T.find(t => t.id === G.me);
+        const meWon = s.mode === 'mission' ? e.w === 'team0' : s.mode === 'ffa' ? e.w === G.me : meT && e.w === 'team' + meT.tm;
+        if (s.mode === 'tdm' || s.mode === 'ctf') {
+          if (e.w === 'draw') big('Oavgjort! 🤝', 2200);
+          else { big(`${TEAMN[e.w === 'team0' ? 0 : 1]} vann! 🏆`, 2200, meT ? (meWon ? 'Ert lag vann!' : 'Bättre lycka nästa gång') : ''); if (meWon) { SFX.win(); confetti(); } }
+        }
+        else if (meWon) { SFX.win(); confetti(); big(s.mode === 'mission' ? 'UPPDRAG KLART! 🎖️' : 'DU VANN! 🏆', 2200); }
         else if (s.mode === 'mission') { SFX.sad(); big('Uppdraget misslyckades', 2200); }
         else { const w = s.T.find(t => t.id === e.w); big(`${w ? esc(w.n) : 'Någon'} vann! 🏆`, 2200); }
         break;
@@ -386,7 +448,7 @@ function handleEvents(s) {
 
 /* ---------- resultat + XP ---------- */
 function xpFor(r, won, s) {
-  let xp = 20 + r.kills * 25 + Math.round(r.dmg / 5) + r.crates * 3;
+  let xp = 20 + r.kills * 25 + Math.round(r.dmg / 5) + r.crates * 3 + (r.caps || 0) * 40 + (r.rets || 0) * 10;
   if (won) xp += s.mode === 'mission' ? 60 + G.mis * 10 : 80;
   if (G.mode !== 'local') xp += 20;
   return xp;
@@ -394,18 +456,21 @@ function xpFor(r, won, s) {
 async function showResult() {
   const s = G.snap, R = G.game ? G.game.result() : G.res.r, W = G.game ? G.game.winner : G.res.w;
   const mine = R.find(r => r.id === G.me);
-  const won = s.mode === 'mission' ? W === 'team0' : W === G.me;
+  const won = s.mode === 'mission' ? W === 'team0' : s.mode === 'ffa' ? W === G.me : !!mine && W === 'team' + mine.team;
   let xpHTML = '';
   if (mine) {
-    const xp = xpFor(mine, won, s), lv = addXp(mine.ch, xp), f = figOf(mine.ch);
-    xpHTML = `<div class="xpl">${avHTML(mine.ch)}<div style="flex:1"><b>${esc(mine.name)} +${xp} XP</b>${lv ? ' <span class="lvup">NIVÅ UPP! 🎉</span>' : ''}
+    const xp = xpFor(mine, won, s), coins = 10 + mine.kills * 8 + (mine.caps || 0) * 20 + mine.crates * 2 + (won ? 30 : 0);
+    const lv = addXp(mine.ch, xp), f = figOf(mine.ch);
+    f.coins += coins; PROF.set(prof);
+    xpHTML = `<div class="xpl">${avHTML(mine.ch)}<div style="flex:1"><b>${esc(mine.name)} +${xp} XP · +${coins} 🪙</b>${lv ? ' <span class="lvup">NIVÅ UPP! 🎉</span>' : ''}
       <div class="xpbar"><i style="width:${f.lvl >= LVL_MAX ? 100 : f.xp / xpNeed(f.lvl) * 100}%"></i><span>Nivå ${f.lvl}</span></div></div></div>
       ${lv ? `<p style="font-size:15px">Nya poäng att lägga i 🔧 Garaget!${MODEL_IDS.some(id => MODELS[id].lvl > f.lvl - lv && MODELS[id].lvl <= f.lvl) ? ' Ny vagn upplåst! 🪖' : ''}</p>` : ''}`;
     if (lv) setTimeout(() => { SFX.win(); buzz(60); }, 300);
   }
-  const sorted = R.filter(r => s.mode === 'ffa' || r.team === 0 || true).slice().sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
-  const rank = `<div class="rank">${sorted.map((r, k) => `<div class="r ${r.id === W || (s.mode === 'mission' && W === 'team0' && r.team === 0) ? 'w' : ''} ${r.id === G.me ? 'mine' : ''}">${k === 0 && s.mode === 'ffa' ? '👑' : (k + 1) + '.'} ${avHTML(r.ch)}<span>${esc(r.name)}${r.bot >= 0 ? ' 🤖' : ''}</span><b>🎯 ${r.kills} · 💥 ${r.deaths}</b></div>`).join('')}</div>`;
-  if (won && mine) await celebrate(mine.ch, s.mode === 'mission' ? 'Uppdrag klart!' : `${mine.name} vann!`, s.mode === 'mission' ? `Uppdrag ${G.mis + 1} av ${N_MIS}` : `${mine.kills} träffar`, ['🪖', '💥', '🎖️', '⭐', '🎉', '✨']);
+  const sorted = R.slice().sort((a, b) => (s.mode === 'ffa' ? 0 : a.team - b.team) || b.kills - a.kills || a.deaths - b.deaths);
+  const line = (r, k) => `<div class="r ${r.id === W || W === 'team' + r.team ? 'w' : ''} ${r.id === G.me ? 'mine' : ''}">${s.mode === 'ffa' ? (k === 0 ? '👑' : (k + 1) + '.') : `<span style="color:${TEAMC[r.team & 1]}">●</span>`} ${avHTML(r.ch)}<span>${esc(r.name)}${r.bot >= 0 ? ' 🤖' : ''}</span><b>${s.mode === 'ctf' ? `🚩 ${r.caps || 0} · ` : ''}🎯 ${r.kills} · 💥 ${r.deaths}</b></div>`;
+  const rank = `<div class="rank">${s.mode === 'tdm' || s.mode === 'ctf' ? `<div style="font-weight:700;font-size:20px"><span style="color:${TEAMC[0]}">🔴 ${s.sc[0]}</span> – <span style="color:${TEAMC[1]}">${s.sc[1]} 🔵</span></div>` : ''}${sorted.map(line).join('')}</div>`;
+  if (won && mine) await celebrate(mine.ch, s.mode === 'mission' ? 'Uppdrag klart!' : s.mode === 'ffa' ? `${mine.name} vann!` : `${TEAMN[mine.team & 1]} vann!`, s.mode === 'mission' ? `Uppdrag ${G.mis + 1} av ${N_MIS}` : s.mode === 'ctf' ? `${s.sc[0]} – ${s.sc[1]} i flaggor` : `${mine.kills} träffar`, ['🪖', '💥', '🎖️', '⭐', '🎉', '✨']);
   if (G.mode === 'local' && G.kind === 'mission') {
     if (won && G.mis === (prof.mis[ME.ch] || 0)) { prof.mis[ME.ch] = G.mis + 1; PROF.set(prof); }
     const next = G.mis + 1 < N_MIS && won;
@@ -417,7 +482,7 @@ async function showResult() {
     $('pAgain').onclick = () => { SFX.tap(); startMission(G.mis); };
     $('pMenu').onclick = () => { SFX.tap(); closePanel(); G.game = null; show('missions'); };
   } else if (G.mode === 'local') {
-    panel(`<h3>${won ? 'Du vann! 🏆' : 'Matchen är slut'}</h3>${rank}${xpHTML}
+    panel(`<h3>${won ? (s.mode === 'ffa' ? 'Du vann! 🏆' : 'Ert lag vann! 🏆') : 'Matchen är slut'}</h3>${rank}${xpHTML}
       <button class="btn green" id="pAgain">🔄 Spela igen</button>
       <div class="row2"><button class="btn purple small" id="pGar">🔧 Garage</button><button class="btn white small" id="pMenu">🏠 Meny</button></div>`);
     $('pAgain').onclick = () => { SFX.tap(); startQuick(); };
@@ -587,6 +652,14 @@ function draw(s, time, dt) {
   for (const t of s.T) { const D = G.disp[t.id]; if (!D || !t.al || !D.moved) continue; d.fillStyle = M.ground === 'snow' ? '#9DB0BE55' : '#00000018'; const R = (MODELS[t.m] || MODELS.bjorn).r; for (const sd of [-1, 1]) { const ox = Math.cos(D.a + Math.PI / 2) * sd * R * .66, oy = Math.sin(D.a + Math.PI / 2) * sd * R * .66; d.fillRect((D.x + ox) * GS - 2, (D.y + oy) * GS - 2, 4, 4); } }
   cx.drawImage(DECAL, 0, 0, WW, WH);
   cx.strokeStyle = '#00000055'; cx.lineWidth = 8; cx.strokeRect(-4, -4, WW + 8, WH + 8);
+  // baser och flaggor (fånga flaggan)
+  if (s.F) {
+    TK.BASES.forEach(([bx, by], i) => {
+      cx.fillStyle = TEAMC[i] + '33'; cx.beginPath(); cx.arc(bx, by, 62, 0, 7); cx.fill();
+      cx.strokeStyle = TEAMC[i]; cx.lineWidth = 5; cx.setLineDash([14, 10]); cx.beginPath(); cx.arc(bx, by, 62, time * .5, time * .5 + 7); cx.stroke(); cx.setLineDash([]);
+      cx.fillStyle = TEAMC[i]; cx.font = 'bold 16px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('BAS', bx, by + 44);
+    });
+  }
   // föremål
   for (const p of s.P) { const b = Math.sin(time * 4 + p[0]) * 4; cx.fillStyle = '#ffffffcc'; cx.beginPath(); cx.arc(p[0], p[1] + b, 20, 0, 7); cx.fill(); cx.strokeStyle = '#FFD23F'; cx.lineWidth = 3; cx.stroke(); cx.font = '24px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText(PICK_IC[p[2]] || '?', p[0], p[1] + b + 1); }
   // minor
@@ -600,13 +673,28 @@ function draw(s, time, dt) {
     const D = G.disp[t.id] || t;
     cx.save(); cx.translate(D.x, D.y);
     cx.fillStyle = '#00000040'; cx.beginPath(); cx.ellipse(6, 8, (MODELS[t.m] || MODELS.bjorn).r * 1.15, (MODELS[t.m] || MODELS.bjorn).r * .95, 0, 0, 7); cx.fill();
+    if (s.mode === 'tdm' || s.mode === 'ctf') { cx.strokeStyle = TEAMC[t.tm & 1]; cx.lineWidth = 6; cx.globalAlpha = .85; cx.beginPath(); cx.arc(0, 0, (MODELS[t.m] || MODELS.bjorn).r * 1.25, 0, 7); cx.stroke(); cx.globalAlpha = 1; }
     if (t.tu || t.bo) { cx.fillStyle = t.tu ? '#FF8A3D88' : '#FFD23F55'; for (let k = 0; k < 3; k++) { cx.beginPath(); cx.arc(-Math.cos(D.a) * (40 + k * 14), -Math.sin(D.a) * (40 + k * 14), 10 - k * 2, 0, 7); cx.fill(); } }
     drawTankBody(cx, { m: t.m, ch: t.ch, a: D.a, ta: D.ta, ht: t.ht, tr: t.tr }, D.odo || 0);
     if (t.sh) { cx.strokeStyle = '#7FD8FF'; cx.globalAlpha = .6 + .3 * Math.sin(time * 12); cx.lineWidth = 5; cx.beginPath(); cx.arc(0, 0, (MODELS[t.m] || MODELS.bjorn).r + 16, 0, 7); cx.stroke(); cx.fillStyle = '#7FD8FF22'; cx.fill(); cx.globalAlpha = 1; }
     cx.restore();
   }
+  // flaggorna
+  if (s.F) s.F.forEach((f, i) => {
+    let x = f[0], y = f[1];
+    if (f[2] === 1) { const c = s.T.find(t => t.fl === i && t.al); if (c) { const D = G.disp[c.id] || c; x = D.x; y = D.y - 10; } }
+    cx.save(); cx.translate(x, y); const wave = Math.sin(time * 6) * 4;
+    cx.strokeStyle = '#333'; cx.lineWidth = 4; cx.beginPath(); cx.moveTo(0, 18); cx.lineTo(0, -46); cx.stroke();
+    cx.fillStyle = TEAMC[i]; cx.beginPath(); cx.moveTo(2, -46); cx.quadraticCurveTo(22, -40 + wave, 38, -34); cx.quadraticCurveTo(22, -26 - wave, 2, -22); cx.fill();
+    cx.strokeStyle = '#fff'; cx.lineWidth = 2; cx.stroke();
+    if (f[2] === 2) { cx.fillStyle = '#fff'; cx.font = 'bold 14px Fredoka, sans-serif'; cx.textAlign = 'center'; cx.fillText('Tappad!', 0, 36); }
+    cx.restore();
+  });
   // kulor
   for (const b of s.B) {
+    if (b[2] === 2) { cx.fillStyle = `rgba(255,${120 + (b[0] * 7 % 100)},40,.55)`; cx.beginPath(); cx.arc(b[0], b[1], 14, 0, 7); cx.fill(); cx.fillStyle = '#FFE27A99'; cx.beginPath(); cx.arc(b[0], b[1], 6, 0, 7); cx.fill(); continue; }
+    if (b[2] === 3) { cx.fillStyle = '#FFE27A'; cx.beginPath(); cx.arc(b[0], b[1], 4, 0, 7); cx.fill(); continue; }
+    if (b[2] === 4) { cx.fillStyle = '#ffffff66'; cx.beginPath(); cx.arc(b[0], b[1], 12, 0, 7); cx.fill(); cx.fillStyle = '#B8F4FF'; cx.beginPath(); cx.arc(b[0], b[1], 6, 0, 7); cx.fill(); continue; }
     if (b[2] === 1) { cx.fillStyle = '#88888866'; cx.beginPath(); cx.arc(b[0], b[1], 9, 0, 7); cx.fill(); cx.fillStyle = '#FF4D6D'; cx.beginPath(); cx.arc(b[0], b[1], 6, 0, 7); cx.fill(); }
     else { cx.fillStyle = '#FFB30055'; cx.beginPath(); cx.arc(b[0], b[1], 10, 0, 7); cx.fill(); cx.fillStyle = '#FFF2B0'; cx.beginPath(); cx.arc(b[0], b[1], 5.5, 0, 7); cx.fill(); }
   }
@@ -623,8 +711,10 @@ function draw(s, time, dt) {
   for (const t of s.T) {
     if (!t.al || t.out) continue;
     const D = G.disp[t.id] || t, R = (MODELS[t.m] || MODELS.bjorn).r, y = D.y - R - 26;
-    const enemy = s.mode === 'mission' ? t.tm !== 0 : t.id !== G.me;
-    cx.font = 'bold 16px Fredoka, sans-serif'; cx.lineWidth = 4; cx.strokeStyle = '#000a'; cx.strokeText(t.n + (t.bot >= 0 ? ' 🤖' : ''), D.x, y - 6); cx.fillStyle = t.id === G.me ? '#FFD23F' : '#fff'; cx.fillText(t.n + (t.bot >= 0 ? ' 🤖' : ''), D.x, y - 6);
+    const myT = (s.T.find(q => q.id === G.me) || { tm: -9 }).tm;
+    const enemy = teamMode(s) ? t.tm !== myT : t.id !== G.me;
+    const nameC = t.id === G.me ? '#FFD23F' : (s.mode === 'tdm' || s.mode === 'ctf') ? (t.tm ? '#9CC3FF' : '#FF9C94') : '#fff';
+    cx.font = 'bold 16px Fredoka, sans-serif'; cx.lineWidth = 4; cx.strokeStyle = '#000a'; cx.strokeText(t.n + (t.bot >= 0 ? ' 🤖' : ''), D.x, y - 6); cx.fillStyle = nameC; cx.fillText(t.n + (t.bot >= 0 ? ' 🤖' : ''), D.x, y - 6);
     cx.fillStyle = '#000a'; rr(cx, D.x - 32, y, 64, 9, 4); cx.fill();
     cx.fillStyle = enemy ? (t.hp / t.mh > .35 ? '#FF6B5A' : '#FF2D2D') : (t.hp / t.mh > .35 ? '#34C759' : '#FFD23F'); rr(cx, D.x - 31, y + 1, 62 * Math.max(0, t.hp / t.mh), 7, 3); cx.fill();
   }
@@ -653,7 +743,9 @@ function drawMini(s) {
   const k = mw / WW;
   cx.globalAlpha = .75; cx.fillStyle = '#0008'; cx.fillRect(x0, y0, mw, mh); cx.globalAlpha = 1;
   cx.fillStyle = '#ffffff66'; for (const r of MAPS[s.map].walls) cx.fillRect(x0 + r[0] * k, y0 + r[1] * k, Math.max(1, r[2] * k), Math.max(1, r[3] * k));
-  for (const t of s.T) { if (!t.al || t.out) continue; const enemy = s.mode === 'mission' ? t.tm !== 0 : t.id !== G.me; cx.fillStyle = t.id === G.me ? '#FFD23F' : enemy ? '#FF4D6D' : '#34C759'; cx.beginPath(); cx.arc(x0 + t.x * k, y0 + t.y * k, t.id === G.me ? 4 : 3, 0, 7); cx.fill(); }
+  if (s.F) { TK.BASES.forEach(([bx, by], i) => { cx.fillStyle = TEAMC[i] + '88'; cx.beginPath(); cx.arc(x0 + bx * k, y0 + by * k, 6, 0, 7); cx.fill(); }); s.F.forEach((f, i) => { cx.fillStyle = TEAMC[i]; cx.fillRect(x0 + f[0] * k - 2, y0 + f[1] * k - 8, 6, 5); cx.fillStyle = '#fff'; cx.fillRect(x0 + f[0] * k - 2, y0 + f[1] * k - 8, 1.5, 10); }); }
+  const myTm = (s.T.find(q => q.id === G.me) || { tm: -9 }).tm;
+  for (const t of s.T) { if (!t.al || t.out) continue; const enemy = teamMode(s) ? t.tm !== myTm : t.id !== G.me; cx.fillStyle = t.id === G.me ? '#FFD23F' : (s.mode === 'tdm' || s.mode === 'ctf') ? TEAMC[t.tm & 1] : enemy ? '#FF4D6D' : '#34C759'; cx.beginPath(); cx.arc(x0 + t.x * k, y0 + t.y * k, t.id === G.me ? 4 : 3, 0, 7); cx.fill(); }
   cx.strokeStyle = '#fff8'; cx.lineWidth = 1; cx.strokeRect(x0, y0, mw, mh);
 }
 
@@ -716,10 +808,12 @@ function leave() {
 }
 
 /* ----- värd ----- */
-const HOST = { ws: null, lobby: [], ok: false, inGame: false, set: Object.assign({ map: 0, kl: 10, bots: 0, diff: 1 }, store.get('hostSet', {})) };
+const HOST = { ws: null, lobby: [], ok: false, inGame: false, set: Object.assign({ map: 0, kl: 1, bots: 0, diff: 1, mode: 'ffa' }, store.get('hostSet', {})) };
+if (HOST.set.kl > 2) HOST.set.kl = 1;
+const smallTeam = list => list.filter(p => p.team === 1).length < list.filter(p => p.team === 0).length ? 1 : 0;
 function hostStart() {
   G.mode = 'host'; G.me = 'h';
-  HOST.lobby = [Object.assign(myTankSpec(ME.ch), { id: 'h', name: myName() })];
+  HOST.lobby = [Object.assign(myTankSpec(ME.ch), { id: 'h', name: myName(), team: 0 })];
   hostConnect(); show('lobby');
 }
 function hostConnect() {
@@ -744,27 +838,32 @@ function hostRecv(d) {
   const id = 'c' + d.slice(0, bar);
   let m; try { m = JSON.parse(d.slice(bar + 1)); } catch (e) { return; }
   if (m.t === 'hi') {
-    const p = { id, name: String(m.name || 'Förare').slice(0, 14), ch: Math.abs(m.ch | 0) % CHARS.length, model: MODELS[m.model] && m.model !== 'boss' ? m.model : 'bjorn', up: TK.cleanUp(m.up) };
+    const p = { id, name: String(m.name || 'Förare').slice(0, 14), ch: Math.abs(m.ch | 0) % CHARS.length, model: MODELS[m.model] && m.model !== 'boss' ? m.model : 'bjorn', up: TK.cleanUp(m.up),
+      weapon: WEAPONS[m.weapon] ? m.weapon : 'kanon', wlvl: Math.max(0, Math.min(5, m.wlvl | 0)) };
     const old = HOST.lobby.find(q => q.id === id);
-    if (old) Object.assign(old, p); else { HOST.lobby.push(p); SFX.pick(); buzz(15); }
+    if (old) Object.assign(old, p); else { p.team = smallTeam(HOST.lobby); HOST.lobby.push(p); SFX.pick(); buzz(15); }
     hostTo(id, { t: 'welcome', id });
     hostLobby();
     // matchen pågår: hoppa in direkt
-    if (HOST.inGame && G.game && !G.game.over) { if (!G.game.T.find(t => t.id === id)) G.game.addTank(p); else { const t = G.game.T.find(q => q.id === id); t.out = false; t.resp = 1; } hostTo(id, { t: 'start' }); }
+    if (HOST.inGame && G.game && !G.game.over) { if (!G.game.T.find(t => t.id === id)) { const lp = HOST.lobby.find(q => q.id === id); G.game.addTank(Object.assign({}, lp, { team: G.game.teamMode() ? smallTeam(G.game.T.filter(t => !t.out)) : 0 })); } else { const t = G.game.T.find(q => q.id === id); t.out = false; t.resp = 1; } hostTo(id, { t: 'start' }); }
+  } else if (m.t === 'team') {
+    const p = HOST.lobby.find(q => q.id === id); if (p && !HOST.inGame) { p.team = p.team ? 0 : 1; hostLobby(); }
   } else if (m.t === 'in') {
     if (HOST.inGame && G.game) G.game.setInput(id, m.i);
   }
 }
-function lobbyMsg() { return { t: 'lobby', players: HOST.lobby.map(p => ({ id: p.id, name: p.name, ch: p.ch, model: p.model })), inGame: HOST.inGame, host: myName(), set: HOST.set }; }
+function lobbyMsg() { return { t: 'lobby', players: HOST.lobby.map(p => ({ id: p.id, name: p.name, ch: p.ch, model: p.model, weapon: p.weapon, team: p.team | 0 })), inGame: HOST.inGame, host: myName(), set: HOST.set }; }
 function hostLobby() { hostAll(lobbyMsg()); if (current === 'lobby') buildLobby(); }
 function hostBegin() {
   const S = HOST.set;
-  const pl = HOST.lobby.map(p => Object.assign({}, p, p.id === 'h' ? { up: figOf(ME.ch).up, model: figOf(ME.ch).model } : {}));
+  const team = S.mode !== 'ffa';
+  const pl = HOST.lobby.map(p => Object.assign({}, p, p.id === 'h' ? Object.assign(myTankSpec(ME.ch), { id: 'h', name: myName(), team: p.team }) : {}, team ? {} : { team: 0 }));
   const used = pl.map(p => p.ch), lv = DIFF[S.diff].lv;
-  for (let k = 0; k < S.bots; k++) { const free = CHARS.map((_, i) => i).filter(i => !used.includes(i)); const ch = free.length ? pick(free) : Math.floor(Math.random() * CHARS.length); used.push(ch); pl.push({ id: 'b' + k, name: charName(ch), ch, model: pick(MODEL_IDS), bot: lv, up: TK.botUp(lv) }); }
+  for (let k = 0; k < S.bots; k++) { const free = CHARS.map((_, i) => i).filter(i => !used.includes(i)); const ch = free.length ? pick(free) : Math.floor(Math.random() * CHARS.length); used.push(ch); pl.push(botSpec('b' + k, ch, lv, { team: team ? smallTeam(pl) : 0 })); }
   if (pl.length < 2) { panel(`<h3>Minst två vagnar</h3><p>Vänta tills någon har gått med – eller lägg till datorvagnar.</p><button class="btn" id="pOk">OK</button>`); $('pOk').onclick = closePanel; return; }
   HOST.inGame = true; G.resSent = false; G.mode = 'host'; G.kind = 'net';
-  begin(new TK.Game(pl, { map: S.map, mode: 'ffa', killLimit: S.kl, time: 240 }), 'h');
+  const lim = limitOf(S.mode, S.kl);
+  begin(new TK.Game(pl, { map: S.map, mode: S.mode, killLimit: lim, capLimit: lim, time: S.mode === 'ffa' ? 240 : 300 }), 'h');
   hostAll({ t: 'start' });
   hostLobby();
 }
@@ -777,7 +876,7 @@ function clientConnect() {
   const ws = new WebSocket(`ws://${location.host}/ws`);
   CL.ws = ws;
   panel(`<h3>Ansluter… <span class="spin">🪖</span></h3>`);
-  ws.onopen = () => { CL.tries = 0; closePanel(); const f = figOf(ME.ch); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch, model: f.model, up: f.up })); if (current !== 'game') show('lobby'); };
+  ws.onopen = () => { CL.tries = 0; closePanel(); const f = figOf(ME.ch); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch, model: f.model, up: f.up, weapon: f.weapon, wlvl: f.wl[f.weapon] })); if (current !== 'game') show('lobby'); };
   ws.onmessage = e => { let m; try { m = JSON.parse(e.data); } catch (er) { return; } clientRecv(m); };
   ws.onclose = () => {
     if (CL.ws !== ws || CL.closing) return;
@@ -803,7 +902,8 @@ function buildLobby() {
   const isHost = G.mode === 'host';
   const L = isHost ? lobbyMsg() : (CL.lobby || { players: [], inGame: false, set: HOST.set });
   const myId = isHost ? 'h' : CL.id, S = L.set || HOST.set;
-  const pls = L.players.map(p => `<div class="pl ${p.id === myId ? 'mine' : ''}" style="${styleOf(p.ch)}">${avHTML(p.ch)}<span>${esc(p.name)}${p.id === myId ? ' <small>(du)</small>' : ''}${p.id === 'h' ? ' 👑' : ''}</span><span class="chip" style="flex:none">${MODELS[p.model] ? MODELS[p.model].name : ''}</span></div>`).join('');
+  const tm = S.mode !== 'ffa';
+  const pls = L.players.map(p => `<div class="pl ${p.id === myId ? 'mine' : ''}" style="${styleOf(p.ch)}${tm ? `;border-left:8px solid ${TEAMC[p.team & 1]}` : ''}">${avHTML(p.ch)}<span>${esc(p.name)}${p.id === myId ? ' <small>(du)</small>' : ''}${p.id === 'h' ? ' 👑' : ''}</span><span class="chip" style="flex:none">${WEAPONS[p.weapon] ? WEAPONS[p.weapon].ic : ''} ${MODELS[p.model] ? MODELS[p.model].name : ''}</span>${tm && p.id === myId && !L.inGame ? `<button class="btn white small" id="swTeam" style="min-width:0;padding:4px 10px;font-size:14px">🔁 Byt lag</button>` : ''}</div>`).join('');
   let side = '';
   if (isHost) {
     let ips = []; try { ips = JSON.parse(Android.netIps()); } catch (e) { }
@@ -812,15 +912,16 @@ function buildLobby() {
     side = `<div class="card"><h4>📲 Bjud in familjen</h4>${url ? `<div class="joininfo"><div class="qr">${qr}</div><div><p class="note">iPhone/iPad: skanna med kameran eller öppna i Safari:</p><div class="url">${esc(url.replace(/^http:\/\//, ''))}</div></div></div>
       <p class="note">Android med appen: Stridsvagnar → 🔗 Gå med.</p>` : `<p class="note">⚠️ Hittar inget wifi. Anslut till wifi (eller slå på surfzon) och tryck 🔄.</p><button class="btn white small" id="reIp">🔄 Uppdatera</button>`}</div>`;
   }
-  const sets = isHost ? `<div class="opts">${seg('map', MAPS.map((m, i) => [i, m.name]), S.map, '🗺️ Bana')}${seg('kl', [[5, '5'], [10, '10'], [15, '15']], S.kl, '🎯 Vinst vid')}
+  const sets = isHost ? `<div class="opts">${seg('mode', MODES, S.mode, '🎮 Läge')}${seg('map', MAPS.map((m, i) => [i, m.name]), S.map, '🗺️ Bana')}${seg('kl', LIMITS[S.mode].map((v, i) => [i, String(v)]), S.kl, `🎯 ${LIMIT_TXT[S.mode]}`)}
       ${seg('bots', [[0, 'Inga'], [1, '1'], [2, '2'], [3, '3'], [4, '4']], S.bots, '🤖 Datorvagnar')}${S.bots ? seg('diff', DIFF.map((d, i) => [i, d.n]), S.diff, '⭐ Datorns nivå') : ''}</div>`
-    : `<p class="note">🗺️ ${MAPS[S.map].name} · 🎯 först till ${S.kl}${S.bots ? ` · 🤖 ${S.bots} datorvagnar` : ''}</p>`;
+    : `<p class="note">🎮 ${MODES.find(m => m[0] === S.mode)[1]} · 🗺️ ${MAPS[S.map].name} · 🎯 först till ${limitOf(S.mode, S.kl)} ${LIMIT_TXT[S.mode]}${S.bots ? ` · 🤖 ${S.bots} datorvagnar` : ''}</p>`;
   $('lobbyBox').innerHTML = `<div class="gar"><div class="card"><h4>🪖 Förare (${L.players.length})</h4><div class="plist">${pls || '<p class="note">Ingen här än…</p>'}</div>
       ${sets}
       ${isHost ? `<button class="btn green" id="gStart" ${HOST.ok && !L.inGame ? '' : 'disabled'}>🪖 Starta matchen!</button>` : `<p class="wait" style="text-align:center;font-weight:600">${L.inGame ? 'Matchen pågår… du hoppar in strax 🪖' : `Väntar på att ${esc(L.host || 'värden')} startar ⏳`}</p>`}
-      <p class="note">Alla mot alla. Den som först får ${S.kl} träffar vinner. Alla får XP till sin egen vagn.</p></div>
+      <p class="note">${S.mode === 'ffa' ? 'Alla mot alla.' : S.mode === 'tdm' ? 'Röda mot blå – laget som först når målet vinner.' : 'Röda mot blå – hämta fiendens flagga och kör hem den till er bas!'} Alla får XP och mynt till sin egen vagn.</p></div>
     <div style="display:flex;flex-direction:column;gap:12px">${side}</div></div>`;
-  if (isHost) $('lobbyBox').querySelectorAll('.seg button').forEach(b => b.onclick = () => { HOST.set[b.parentNode.dataset.s] = +b.dataset.v; store.set('hostSet', HOST.set); SFX.tap(); hostLobby(); });
+  if (isHost) $('lobbyBox').querySelectorAll('.seg button').forEach(b => b.onclick = () => { HOST.set[b.parentNode.dataset.s] = segVal(b); store.set('hostSet', HOST.set); SFX.tap(); hostLobby(); });
+  if ($('swTeam')) $('swTeam').onclick = () => { SFX.tap(); if (isHost) { const p = HOST.lobby.find(q => q.id === 'h'); p.team = p.team ? 0 : 1; hostLobby(); } else clSend({ t: 'team' }); };
   if ($('gStart')) $('gStart').onclick = () => { SFX.tap(); hostBegin(); };
   if ($('reIp')) $('reIp').onclick = () => { SFX.tap(); buildLobby(); };
 }
@@ -836,7 +937,8 @@ function help() {
   panel(`<h3>Så spelar man 🪖</h3>
     <p style="text-align:left;font-size:16px">👈 <b>Vänster tumme</b>: dra åt det håll du vill köra.<br>👉 <b>Höger tumme</b>: dra åt det håll du vill sikta – vagnen skjuter så länge du drar.<br>
     ⭐ <b>Specialknappen</b>: vagnens förmåga (sköld, turbo, mina eller raketer).<br>Kulorna studsar en gång mot väggar. Lådor går sönder och kan ge föremål.<br>
-    ❤️ laga · ⚡ fart · 🔱 trippelskott · 🛡️ sköld<br>🌳 Göm dig i buskarna!<br>
+    ❤️ laga · ⚡ fart · 🔱 trippelskott · 🛡️ sköld<br>🌳 Göm dig i buskarna!<br>🚩 <b>Fånga flaggan</b>: kör till fiendens bas, ta flaggan och kör hem till er egen bas medan er flagga står där.<br>
+    🔫 Byt och uppgradera <b>vapen</b> i garaget med mynt.<br>
     🖥️ Dator: WASD kör, musen siktar, klick skjuter, mellanslag = special.<br>
     🔧 <b>Garage</b>: XP ger nivåer, nivåer ger poäng till uppgraderingar och låser upp nya vagnar.</p>
     <button class="btn green" id="pClose">👍 Kör!</button>`);

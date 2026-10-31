@@ -7,12 +7,26 @@
 
   /* ---------- vagnmodeller ---------- */
   const MODELS = {
-    bjorn:  { name: 'Björnen',  lvl: 1,  hp: 100, spd: 210, dmg: 20, rel: .55, vel: 640, r: 30, sp: 'shield',  spCd: 11, desc: 'Allround – har en sköld' },
-    vessla: { name: 'Vesslan',  lvl: 3,  hp: 75,  spd: 275, dmg: 15, rel: .38, vel: 700, r: 26, sp: 'turbo',   spCd: 7,  desc: 'Snabb och kvick – turbo' },
-    mammut: { name: 'Mammuten', lvl: 6,  hp: 150, spd: 165, dmg: 30, rel: .8,  vel: 580, r: 36, sp: 'mine',    spCd: 6,  desc: 'Tung och stark – lägger minor' },
-    drake:  { name: 'Draken',   lvl: 10, hp: 110, spd: 215, dmg: 22, rel: .58, vel: 660, r: 31, sp: 'rockets', spCd: 10, desc: 'Avfyrar en raketsalva' },
-    boss:   { name: 'Bossen',   lvl: 99, hp: 320, spd: 150, dmg: 26, rel: .5,  vel: 600, r: 46, sp: 'rockets', spCd: 8,  desc: '' }
+    // dk/rk/vk = hur vagnen påverkar vapnets skada, laddtid och kulfart
+    bjorn:  { name: 'Björnen',  lvl: 1,  hp: 150, spd: 210, dk: 1,   rk: 1,    vk: 1,   r: 30, sp: 'shield',  spCd: 11, desc: 'Allround – har en sköld' },
+    vessla: { name: 'Vesslan',  lvl: 3,  hp: 112, spd: 275, dk: .8,  rk: .75,  vk: 1.1, r: 26, sp: 'turbo',   spCd: 7,  desc: 'Snabb och kvick – turbo' },
+    mammut: { name: 'Mammuten', lvl: 6,  hp: 225, spd: 165, dk: 1.4, rk: 1.35, vk: .9,  r: 36, sp: 'mine',    spCd: 6,  desc: 'Tung och stark – lägger minor' },
+    drake:  { name: 'Draken',   lvl: 10, hp: 165, spd: 215, dk: 1.1, rk: 1.05, vk: 1.03, r: 31, sp: 'rockets', spCd: 10, desc: 'Avfyrar en raketsalva' },
+    boss:   { name: 'Bossen',   lvl: 99, hp: 480, spd: 150, dk: 1.3, rk: .9,   vk: .95, r: 46, sp: 'rockets', spCd: 8,  desc: '' }
   };
+  /* ---------- vapen (väljs i garaget, uppgraderas 0–5 med mynt) ---------- */
+  // k: 0 vanlig kula, 1 exploderar, 2 eld, 3 liten kula, 4 prickskytt
+  const WEAPONS = {
+    kanon:  { name: 'Kanon',       ic: '💥', lvl: 1,  dmg: 20, rel: .55, vel: 640,  life: 1.6, b: 1, n: 1, spread: 0,   k: 0, desc: 'Pålitlig – kulan studsar en gång' },
+    ksp:    { name: 'Kulspruta',   ic: '🔫', lvl: 2,  dmg: 6,  rel: .11, vel: 820,  life: 1.0, b: 0, n: 1, spread: .07, k: 3, desc: 'Massor av små skott' },
+    hagel:  { name: 'Hagelgevär',  ic: '🌟', lvl: 4,  dmg: 9,  rel: .85, vel: 640,  life: .5,  b: 0, n: 6, spread: .42, k: 3, desc: 'Förödande på nära håll' },
+    studs:  { name: 'Studsaren',   ic: '🎱', lvl: 5,  dmg: 15, rel: .5,  vel: 600,  life: 2.6, b: 4, n: 1, spread: 0,   k: 0, desc: 'Kulan studsar fyra gånger' },
+    raket:  { name: 'Raketgevär',  ic: '🚀', lvl: 7,  dmg: 34, rel: 1.25, vel: 470, life: 1.8, b: 0, n: 1, spread: 0,   k: 1, er: 75, desc: 'Exploderar och skadar runt omkring' },
+    prick:  { name: 'Prickskytt',  ic: '🎯', lvl: 9,  dmg: 48, rel: 1.5, vel: 1400, life: 1.0, b: 1, n: 1, spread: 0,   k: 4, desc: 'Långt och hårt – men långsam laddning' },
+    eld:    { name: 'Eldkastare',  ic: '🔥', lvl: 12, dmg: 2.5, rel: .05, vel: 380, life: .42, b: 0, n: 1, spread: .2, k: 2, desc: 'Brinnande eld på kort avstånd' }
+  };
+  const WEAPON_IDS = Object.keys(WEAPONS);
+  const wlvlOf = v => Math.max(0, Math.min(5, v | 0));
   const SPECIAL = { shield: { name: 'Sköld', ic: '🛡️' }, turbo: { name: 'Turbo', ic: '💨' }, mine: { name: 'Mina', ic: '💣' }, rockets: { name: 'Raketer', ic: '🚀' } };
   // uppgraderingar 0–5
   const UPG_KEYS = ['arm', 'eng', 'gun', 'rel', 'vel', 'spc'];
@@ -26,6 +40,10 @@
     const seen = new Set(); return out.filter(q => { const k = q.join(','); if (seen.has(k)) return false; seen.add(k); return true; });
   }
   const m4p = (x, y) => { const o = [[x, y], [W - x, y], [x, H - y], [W - x, H - y]]; const s = new Set(); return o.filter(p => { const k = p.join(','); if (s.has(k)) return false; s.add(k); return true; }); };
+  // lagens sidor: rött till vänster, blått till höger
+  const TS_CAND = [[130, 130], [130, H - 130], [90, H / 2], [260, H / 2 - 120], [260, H / 2 + 120], [110, 320], [110, H - 320], [250, 110], [250, H - 110], [90, 420], [90, H - 420]];
+  const TEAM_SPAWNS = [TS_CAND, TS_CAND.map(([x, y]) => [W - x, y])];
+  const BASES = [[150, H / 2], [W - 150, H / 2]];
   const SPAWNS = [[130, 130], [W - 130, H - 130], [W - 130, 130], [130, H - 130], [W / 2, 90], [W / 2, H - 90], [90, H / 2], [W - 90, H / 2]];
   const MAPS = [
     { name: 'Övningsfältet', ground: 'grass',
@@ -41,7 +59,7 @@
       crates: [...m4p(330, 300), ...m4p(760, 280), ...m4p(540, 470), [900, 550]],
       bushes: [...m4p(330, 460).map(p => [p[0], p[1], 55]), [900, 120, 60], [900, 980, 60]] },
     { name: 'Snöskogen', ground: 'snow',
-      walls: [...mirror4([380, 300, 70, 70]), ...mirror4([700, 180, 70, 70]), [865, 515, 70, 70], ...mirror4([180, 520, 70, 60])],
+      walls: [...mirror4([380, 300, 70, 70]), ...mirror4([700, 180, 70, 70]), [865, 515, 70, 70], ...mirror4([300, 520, 60, 60])],
       crates: [...m4p(560, 400), ...m4p(560, 460), ...m4p(300, 160), ...m4p(780, 470), [900, 300], [900, 800]],
       bushes: [...m4p(520, 220).map(p => [p[0], p[1], 75]), ...m4p(260, 420).map(p => [p[0], p[1], 65]), ...m4p(760, 360).map(p => [p[0], p[1], 70]), [900, 420, 60], [900, 680, 60]] }
   ];
@@ -75,16 +93,21 @@
       this.T = []; this.bullets = []; this.mines = []; this.picks = []; this.ev = []; this.evSeq = 0;
       this.time = this.opt.time; this.t = 0; this.phase = 'start'; this.pt = 0; this.over = false; this.winner = null;
       this.pickT = 4; this.gridDirty = true; this.flowCache = {};
+      this.score = [0, 0];
+      this.flags = BASES.map(([x, y]) => ({ x, y, st: 'base', by: null, t: 0 }));
       for (const p of players) this.addTank(p);
       this.emit('start');
     }
     emit(e, o) { this.ev.push(Object.assign({ id: ++this.evSeq, e }, o || {})); if (this.ev.length > 80) this.ev.shift(); }
     addTank(p) {
       const M = MODELS[p.boss ? 'boss' : (MODELS[p.model] ? p.model : 'bjorn')], u = cleanUp(p.up);
+      const wid = WEAPONS[p.weapon] ? p.weapon : 'kanon', Wp = WEAPONS[wid], wl = wlvlOf(p.wlvl);
       const t = {
         id: p.id, name: p.name || '', ch: p.ch | 0, model: p.boss ? 'boss' : (MODELS[p.model] ? p.model : 'bjorn'), bot: p.bot == null ? -1 : p.bot, team: p.team || 0,
-        maxhp: Math.round(M.hp * (1 + u.arm * .09)), spd: M.spd * (1 + u.eng * .06), dmg: M.dmg * (1 + u.gun * .09), rel: M.rel * (1 - u.rel * .07),
-        vel: M.vel * (1 + u.vel * .08), r: M.r, sp: M.sp, spCd: M.spCd * (1 - u.spc * .1),
+        maxhp: Math.round(M.hp * (1 + u.arm * .09)), spd: M.spd * (1 + u.eng * .06),
+        wp: wid, wl, dmg: Wp.dmg * M.dk * (1 + u.gun * .09) * (1 + wl * .1), rel: Wp.rel * M.rk * (1 - u.rel * .07) * (1 - wl * .05),
+        vel: Wp.vel * M.vk * (1 + u.vel * .08) * (1 + wl * .05), r: M.r, sp: M.sp, spCd: M.spCd * (1 - u.spc * .1),
+        caps: 0, rets: 0, flag: -1,
         x: 0, y: 0, vx: 0, vy: 0, a: 0, ta: 0, hp: 0, alive: false, resp: 0, lives: p.lives != null ? p.lives : this.opt.lives,
         reload: 0, cd: 2, shield: 0, turbo: 0, boost: 0, triple: 0, hitT: 0,
         kills: 0, deaths: 0, dmgDone: 0, shots: 0, hits: 0, crates: 0, out: false,
@@ -94,14 +117,55 @@
       this.spawn(t, true);
       return t;
     }
-    removeTank(id) { const t = this.T.find(q => q.id === id); if (t) { t.alive = false; t.out = true; t.resp = 1e9; } }
+    teamSpawns(tm) {
+      if (!this._ts) {
+        const sol = this.walls.concat(this.map.crates.map(([x, y]) => [x - 26, y - 26, 52, 52]));
+        const free = ([x, y]) => !sol.some(r => x > r[0] - 48 && x < r[0] + r[2] + 48 && y > r[1] - 48 && y < r[1] + r[3] + 48);
+        this._ts = TEAM_SPAWNS.map(l => l.filter(free).slice(0, 6));
+      }
+      return this._ts[tm].slice();
+    }
+    foe(a, b) { return a !== b && (this.opt.mode === 'ffa' || a.team !== b.team); }
+    teamMode() { return this.opt.mode !== 'ffa'; }
+    removeTank(id) { const t = this.T.find(q => q.id === id); if (t) { this.dropFlag(t); t.alive = false; t.out = true; t.resp = 1e9; } }
+    /* ---------- fånga flaggan ---------- */
+    dropFlag(t) {
+      if (t.flag < 0) return;
+      const f = this.flags[t.flag]; f.st = 'dropped'; f.by = null; f.x = t.x; f.y = t.y; f.t = 15;
+      this.emit('flag', { f: t.flag, a: 'drop', t: t.id, x: Math.round(t.x), y: Math.round(t.y) });
+      t.flag = -1;
+    }
+    flagsStep(dt) {
+      this.flags.forEach((f, fi) => {
+        if (f.st === 'carried') { const c = this.T.find(q => q.id === f.by); if (!c || !c.alive) { if (c) this.dropFlag(c); else { f.st = 'base'; f.by = null; [f.x, f.y] = BASES[fi]; } } else { f.x = c.x; f.y = c.y; } }
+        if (f.st === 'dropped') { f.t -= dt; if (f.t <= 0) { f.st = 'base'; [f.x, f.y] = BASES[fi]; this.emit('flag', { f: fi, a: 'ret', x: Math.round(f.x), y: Math.round(f.y) }); } }
+        if (f.st === 'carried') return;
+        for (const t of this.T) {
+          if (!t.alive || Math.hypot(t.x - f.x, t.y - f.y) > t.r + 26) continue;
+          if (t.team === fi) {
+            if (f.st === 'dropped') { f.st = 'base'; [f.x, f.y] = BASES[fi]; t.rets++; this.emit('flag', { f: fi, a: 'ret', t: t.id, x: Math.round(f.x), y: Math.round(f.y) }); }
+          } else if (t.flag < 0) { f.st = 'carried'; f.by = t.id; t.flag = fi; this.emit('flag', { f: fi, a: 'take', t: t.id, x: Math.round(t.x), y: Math.round(t.y) }); break; }
+        }
+      });
+      // poäng: bär fiendens flagga till sin egen bas medan den egna flaggan står hemma
+      for (const t of this.T) {
+        if (!t.alive || t.flag < 0) continue;
+        const home = BASES[t.team & 1], own = this.flags[t.team & 1];
+        if (own.st === 'base' && Math.hypot(t.x - home[0], t.y - home[1]) < t.r + 40) {
+          const f = this.flags[t.flag]; f.st = 'base'; f.by = null; [f.x, f.y] = BASES[t.flag];
+          this.score[t.team & 1]++; t.caps++;
+          this.emit('flag', { f: t.flag, a: 'cap', t: t.id, x: Math.round(t.x), y: Math.round(t.y) });
+          t.flag = -1;
+        }
+      }
+    }
     spawn(t, first) {
       // spawnpunkt långt från fienderna
       let best = null, bd = -1;
-      const pts = SPAWNS.slice();
-      if (first) { const i = this.T.indexOf(t); const p = pts[i % pts.length]; best = p; }
+      const pts = this.opt.mode === 'tdm' || this.opt.mode === 'ctf' ? this.teamSpawns(t.team & 1) : SPAWNS.slice();
+      if (first) { const mates = this.T.filter(q => pts === SPAWNS || q.team === t.team); const i = mates.indexOf(t); best = pts[Math.max(0, i) % pts.length]; }
       else for (const p of pts) {
-        let md = 1e9; for (const o of this.T) if (o !== t && o.alive) md = Math.min(md, Math.hypot(o.x - p[0], o.y - p[1]));
+        let md = 1e9; for (const o of this.T) if (this.foe(o, t) && o.alive) md = Math.min(md, Math.hypot(o.x - p[0], o.y - p[1]));
         md += this.rng() * 80; if (md > bd) { bd = md; best = p; }
       }
       t.x = best[0]; t.y = best[1]; t.vx = t.vy = 0;
@@ -129,6 +193,7 @@
       this.bulletsStep(dt);
       this.minesStep(dt);
       this.picksStep(dt);
+      if (this.opt.mode === 'ctf') this.flagsStep(dt);
       this.checkEnd();
     }
     anim(dt) { for (const t of this.T) { t.hitT = Math.max(0, t.hitT - dt); } this.bulletsStep(dt); }
@@ -146,7 +211,7 @@
       // köra
       let mx = I.mx, my = I.my; const ml = Math.hypot(mx, my);
       if (ml > 1) { mx /= ml; my /= ml; }
-      const sp = t.spd * (t.turbo > 0 ? 2.1 : 1) * (t.boost > 0 ? 1.35 : 1);
+      const sp = t.spd * (t.turbo > 0 ? 2.1 : 1) * (t.boost > 0 ? 1.35 : 1) * (t.flag >= 0 ? .88 : 1);
       if (ml > .15) {
         const want = Math.atan2(my, mx);
         // vagnen vrider sig mot styrriktningen (kan även backa)
@@ -188,14 +253,16 @@
       }
     }
     fire(t) {
+      const Wp = WEAPONS[t.wp];
       t.reload = t.rel; t.shots++;
       const angs = t.triple > 0 ? [-.16, 0, .16] : [0];
       const mz = t.r + 22;
-      for (const da of angs) {
-        const a = t.ta + da;
-        this.bullets.push({ x: t.x + Math.cos(a) * mz, y: t.y + Math.sin(a) * mz, vx: Math.cos(a) * t.vel, vy: Math.sin(a) * t.vel, dmg: t.dmg, o: t.id, b: 1, life: 1.6, k: 0 });
+      for (const da of angs) for (let n = 0; n < Wp.n; n++) {
+        const a = t.ta + da + (Wp.n > 1 ? (n / (Wp.n - 1) - .5) * Wp.spread : (this.rng() - .5) * Wp.spread);
+        const v = t.vel * (Wp.n > 1 ? .85 + this.rng() * .3 : 1);
+        this.bullets.push({ x: t.x + Math.cos(a) * mz, y: t.y + Math.sin(a) * mz, vx: Math.cos(a) * v, vy: Math.sin(a) * v, dmg: t.dmg, o: t.id, b: Wp.b, life: Wp.life, k: Wp.k, er: Wp.er || 0 });
       }
-      this.emit('fire', { t: t.id, x: Math.round(t.x + Math.cos(t.ta) * mz), y: Math.round(t.y + Math.sin(t.ta) * mz), a: Math.round(t.ta * 100) / 100 });
+      if (Wp.k !== 2 && Wp.k !== 3 || this.rng() < .3) this.emit('fire', { w: t.wp, t: t.id, x: Math.round(t.x + Math.cos(t.ta) * mz), y: Math.round(t.y + Math.sin(t.ta) * mz), a: Math.round(t.ta * 100) / 100 });
     }
     special(t) {
       t.cd = t.spCd;
@@ -206,7 +273,7 @@
         const mine = this.mines.filter(m => m.o === t.id); if (mine.length >= 3) this.mines.splice(this.mines.indexOf(mine[0]), 1);
         this.mines.push({ x: t.x - Math.cos(t.a) * (t.r + 8), y: t.y - Math.sin(t.a) * (t.r + 8), o: t.id, arm: 1, dmg: 40 + t.dmg * .6 });
       } else if (t.sp === 'rockets') {
-        for (let k = -2; k <= 2; k++) { const a = t.ta + k * .14, mz = t.r + 16; this.bullets.push({ x: t.x + Math.cos(a) * mz, y: t.y + Math.sin(a) * mz, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, dmg: t.dmg * .7, o: t.id, b: 0, life: 1.4, k: 1 }); }
+        for (let k = -2; k <= 2; k++) { const a = t.ta + k * .14, mz = t.r + 16; this.bullets.push({ x: t.x + Math.cos(a) * mz, y: t.y + Math.sin(a) * mz, vx: Math.cos(a) * 520, vy: Math.sin(a) * 520, dmg: 14 * (MODELS[t.model].dk || 1), o: t.id, b: 0, life: 1.4, k: 1, er: 60 }); }
       }
     }
     bulletsStep(dt) {
@@ -216,6 +283,7 @@
         const px = b.x, py = b.y;
         b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
         let dead = b.life <= 0, boom = b.k === 1 && b.life <= 0;
+        if (b.k === 2) { b.vx *= .985; b.vy *= .985; }
         if (b.x < 0 || b.x > W) { if (b.b > 0) { b.b--; b.vx = -b.vx; b.x = clamp(b.x, 0, W); this.emit('bounce', { x: Math.round(b.x), y: Math.round(b.y) }); } else dead = true; }
         if (b.y < 0 || b.y > H) { if (b.b > 0) { b.b--; b.vy = -b.vy; b.y = clamp(b.y, 0, H); this.emit('bounce', { x: Math.round(b.x), y: Math.round(b.y) }); } else dead = true; }
         if (!dead) {
@@ -239,6 +307,7 @@
         }
         if (!dead) for (const t of this.T) {
           if (!t.alive || t.id === b.o) continue;
+          if (this.teamMode()) { const ow = this.T.find(q => q.id === b.o); if (ow && ow.team === t.team) continue; }
           if ((b.x - t.x) ** 2 + (b.y - t.y) ** 2 < (t.r + 5) ** 2) {
             dead = true;
             if (b.k === 1) boom = true;
@@ -247,18 +316,20 @@
           }
         }
         if (dead) {
-          if (boom) this.explode(b.x, b.y, 70, b.dmg, b.o);
+          if (boom) this.explode(b.x, b.y, b.er || 70, b.dmg, b.o);
           this.bullets.splice(i, 1);
         }
       }
     }
     explode(x, y, R, dmg, o) {
       this.emit('boom', { x: Math.round(x), y: Math.round(y), r: R });
-      for (const t of this.T) if (t.alive) { const d = Math.hypot(t.x - x, t.y - y); if (d < R + t.r) this.damage(t, dmg * (1 - .5 * Math.min(1, d / (R + t.r))), o, t.x - x, t.y - y, t.id === o ? .4 : 1); }
+      const ow = this.T.find(q => q.id === o);
+      for (const t of this.T) if (t.alive && !(this.teamMode() && ow && ow !== t && ow.team === t.team)) { const d = Math.hypot(t.x - x, t.y - y); if (d < R + t.r) this.damage(t, dmg * (1 - .5 * Math.min(1, d / (R + t.r))), o, t.x - x, t.y - y, t.id === o ? .4 : 1); }
       for (const c of this.crates) if (c.hp > 0 && Math.hypot(c.x + c.w / 2 - x, c.y + c.h / 2 - y) < R + 30) { c.hp -= dmg; if (c.hp <= 0) { this.gridDirty = true; this.emit('crate', { x: Math.round(c.x + 26), y: Math.round(c.y + 26), d: 1 }); this.maybeDrop(c.x + c.w / 2, c.y + c.h / 2); } }
     }
     damage(t, dmg, from, vx, vy, mult) {
       if (!t.alive) return;
+      if (this.teamMode()) { const ow = this.T.find(q => q.id === from); if (ow && ow !== t && ow.team === t.team) return; }
       if (t.shield > 0) { this.emit('block', { t: t.id, x: Math.round(t.x), y: Math.round(t.y) }); return; }
       dmg *= (mult == null ? 1 : mult);
       dmg = Math.min(dmg, t.hp);
@@ -269,14 +340,16 @@
       this.emit('hit', { t: t.id, o: from, d: Math.round(dmg), x: Math.round(t.x), y: Math.round(t.y) });
       if (t.hp <= 0) {
         t.hp = 0; t.alive = false; t.deaths++; t.lives--; t.resp = 3;
-        if (o && o !== t) o.kills++;
+        if (o && o !== t) { o.kills++; if (this.opt.mode === 'tdm') this.score[o.team & 1]++; }
+        this.dropFlag(t);
         this.emit('kill', { t: t.id, o: from, x: Math.round(t.x), y: Math.round(t.y) });
       }
     }
     minesStep(dt) {
       for (let i = this.mines.length - 1; i >= 0; i--) {
         const m = this.mines[i]; if (m.arm > 0) { m.arm -= dt; continue; }
-        for (const t of this.T) if (t.alive && t.id !== m.o && Math.hypot(t.x - m.x, t.y - m.y) < t.r + 18) { this.mines.splice(i, 1); this.explode(m.x, m.y, 95, m.dmg, m.o); break; }
+        const mo = this.T.find(q => q.id === m.o);
+        for (const t of this.T) if (t.alive && t.id !== m.o && !(mo && this.teamMode() && mo.team === t.team) && Math.hypot(t.x - m.x, t.y - m.y) < t.r + 18) { this.mines.splice(i, 1); this.explode(m.x, m.y, 95, m.dmg, m.o); break; }
       }
     }
     maybeDrop(x, y) { if (this.rng() < .35) this.addPick(x, y); }
@@ -309,7 +382,10 @@
     }
     checkEnd() {
       const o = this.opt;
-      if (o.mode === 'ffa') {
+      if (o.mode === 'tdm' || o.mode === 'ctf') {
+        const lim = o.mode === 'ctf' ? o.capLimit || 3 : o.killLimit;
+        if (this.score[0] >= lim || this.score[1] >= lim || (o.time > 0 && this.time <= 0)) this.finish(this.score[0] === this.score[1] ? 'draw' : this.score[0] > this.score[1] ? 'team0' : 'team1');
+      } else if (o.mode === 'ffa') {
         const top = this.T.filter(t => !t.out).sort((a, b) => b.kills - a.kills || a.deaths - b.deaths)[0];
         if ((top && top.kills >= o.killLimit) || (o.time > 0 && this.time <= 0)) this.finish(top ? top.id : null);
       } else {
@@ -363,6 +439,17 @@
       if (!best) return [gx0 - t.x, gy0 - t.y];
       return [best[0] * CELL + CELL / 2 - t.x, best[1] * CELL + CELL / 2 - t.y];
     }
+    ctfGoal(t) {
+      const tm = t.team & 1, own = this.flags[tm], foeF = this.flags[1 - tm];
+      if (t.ai.role == null) t.ai.role = this.T.filter(q => q.team === t.team && q.bot >= 0).indexOf(t) % 2;
+      if (t.flag >= 0) return BASES[tm].slice();
+      if (own.st === 'carried' || (own.st === 'dropped' && (t.ai.role === 1 || Math.hypot(own.x - t.x, own.y - t.y) < 600))) return [own.x, own.y];
+      if (t.ai.role === 0 || this.T.filter(q => q.team === t.team && !q.out).length < 2) {
+        if (foeF.st === 'carried') { const c = this.T.find(q => q.id === foeF.by); if (c && c.team === t.team) return null; }
+        return [foeF.x, foeF.y];
+      }
+      const b = BASES[tm]; return Math.hypot(b[0] - t.x, b[1] - t.y) > 260 ? [b[0] + (tm ? -120 : 120), b[1]] : null;
+    }
     botThink(t, dt) {
       const A = t.ai, L = clamp(t.bot, 1, 10), r = this.rng;
       A.t -= dt;
@@ -376,6 +463,7 @@
         if (r() < .25) A.strafe = -A.strafe;
         A.goal = null;
         if (t.hp < t.maxhp * .4) { let bp = null, bpd = 700; for (const p of this.picks) if (p.k === 'hp') { const d = Math.hypot(p.x - t.x, p.y - t.y); if (d < bpd) { bpd = d; bp = p; } } if (bp) A.goal = [bp.x, bp.y]; }
+        if (!A.goal && this.opt.mode === 'ctf') A.goal = this.ctfGoal(t);
         if (!A.goal && !tgt && this.picks.length) A.goal = [this.picks[0].x, this.picks[0].y];
         A.aimErr = (r() - .5) * 2 * Math.max(.02, .3 - L * .028);
       }
@@ -385,7 +473,8 @@
       if (A.goal) { [mx, my] = this.pathDir(t, A.goal[0], A.goal[1]); }
       else if (tgt) {
         const dx = tgt.x - t.x, dy = tgt.y - t.y, d = Math.hypot(dx, dy);
-        const want = 260 + (10 - L) * 12;
+        const Wp = WEAPONS[t.wp], range = t.vel * Wp.life * .8;
+        const want = Math.min(260 + (10 - L) * 12, range * .6);
         if (!see || d > want + 200) [mx, my] = this.pathDir(t, tgt.x, tgt.y);
         else {
           const nx = dx / d, ny = dy / d;
@@ -406,7 +495,7 @@
         const px = tgt.x + tgt.vx * lead, py = tgt.y + tgt.vy * lead;
         const aa = Math.atan2(py - t.y, px - t.x) + A.aimErr;
         ax = Math.cos(aa); ay = Math.sin(aa);
-        if (see && Math.abs(angDiff(t.ta, aa)) < .14 && d < 900) fire = 1;
+        if (see && Math.abs(angDiff(t.ta, aa)) < .14 && d < Math.min(900, t.vel * WEAPONS[t.wp].life * .95)) fire = 1;
         // specialförmåga
         if (t.cd <= 0) {
           if (t.sp === 'shield' && t.hp < t.maxhp * .5 && t.hitT > 0) t.spPress = 1;
@@ -423,10 +512,11 @@
     snap() {
       const R = v => Math.round(v);
       return {
+        sc: this.score, F: this.opt.mode === 'ctf' ? this.flags.map(f => [Math.round(f.x), Math.round(f.y), f.st === 'base' ? 0 : f.st === 'carried' ? 1 : 2]) : null, cl: this.opt.capLimit || 3,
         ph: this.phase, tm: Math.max(0, Math.ceil(this.time)), ov: this.over ? 1 : 0, w: this.winner, map: this.opt.map, mode: this.opt.mode, kl: this.opt.killLimit,
         T: this.T.map(t => ({ id: t.id, n: t.name, ch: t.ch, m: t.model, tm: t.team, x: R(t.x), y: R(t.y), a: Math.round(t.a * 100) / 100, ta: Math.round(t.ta * 100) / 100,
           hp: R(t.hp), mh: t.maxhp, al: t.alive ? 1 : 0, sh: t.shield > 0 ? 1 : 0, tu: t.turbo > 0 ? 1 : 0, bo: t.boost > 0 ? 1 : 0, tr: t.triple > 0 ? 1 : 0,
-          cd: Math.max(0, Math.round(t.cd * 10) / 10), cdm: Math.round(t.spCd * 10) / 10, sp: t.sp, k: t.kills, d: t.deaths, lv: t.lives, rs: t.alive ? 0 : Math.max(0, Math.ceil(t.resp)), ht: t.hitT > 0 ? 1 : 0, out: t.out ? 1 : 0, bot: t.bot })),
+          cd: Math.max(0, Math.round(t.cd * 10) / 10), cdm: Math.round(t.spCd * 10) / 10, sp: t.sp, k: t.kills, d: t.deaths, lv: t.lives, rs: t.alive ? 0 : Math.max(0, Math.ceil(t.resp)), ht: t.hitT > 0 ? 1 : 0, out: t.out ? 1 : 0, bot: t.bot, wp: t.wp, fl: t.flag })),
         B: this.bullets.map(b => [R(b.x), R(b.y), b.k]),
         M: this.mines.map(m => [R(m.x), R(m.y), m.o, m.arm > 0 ? 0 : 1]),
         P: this.picks.map(p => [R(p.x), R(p.y), p.k]),
@@ -434,9 +524,9 @@
         ev: this.ev.slice(-30)
       };
     }
-    result() { return this.T.map(t => ({ id: t.id, name: t.name, ch: t.ch, kills: t.kills, deaths: t.deaths, dmg: Math.round(t.dmgDone), shots: t.shots, hits: t.hits, crates: t.crates, team: t.team, bot: t.bot })); }
+    result() { return this.T.map(t => ({ id: t.id, name: t.name, ch: t.ch, kills: t.kills, deaths: t.deaths, dmg: Math.round(t.dmgDone), shots: t.shots, hits: t.hits, crates: t.crates, team: t.team, bot: t.bot, caps: t.caps, rets: t.rets })); }
   }
 
-  const TK = { DT, W, H, CELL, MODELS, SPECIAL, MAPS, UPG_KEYS, cleanUp, botUp, Game, RNG, segRect };
+  const TK = { DT, W, H, CELL, MODELS, SPECIAL, MAPS, UPG_KEYS, cleanUp, botUp, Game, RNG, segRect, WEAPONS, WEAPON_IDS, BASES, TEAM_SPAWNS };
   if (typeof module !== 'undefined' && module.exports) module.exports = TK; else root.TK = TK;
 })(this);

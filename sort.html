@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Trolldrycker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#2A1458">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:radial-gradient(ellipse at 50% 0%,#7B4BD6 0%,#3A1B7A 45%,#170A33 100%)}
+.hidden{display:none!important}
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:8px 14px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:58px}
+.me b{font-size:19px}
+.me small{display:block;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#2B2350;color:#FFD23F;border-radius:10px;padding:2px 9px;font-weight:700;font-size:14px;white-space:nowrap}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #menu{flex-direction:row;gap:26px}
+  #menu .logo .l1{font-size:42px}#menu .logo .l2{font-size:34px}
+  #menu .menu .btn{padding:9px 18px}
+}
+#menu .menu{gap:10px}
+.row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.row2 .btn{min-width:0;flex:1}
+.char .chip{font-size:12px;padding:1px 7px}
+.wrap{width:min(96vw,760px);display:flex;flex-direction:column;gap:12px;margin-top:64px;padding-bottom:20px}
+.lvls{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:8px}
+.lv{aspect-ratio:1;border-radius:18px;background:var(--card);box-shadow:0 4px 0 #C9C3E8;font-weight:700;font-size:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05}
+.lv small{font-size:11px;color:var(--muted)}
+.lv.next{background:#FFD23F;box-shadow:0 4px 0 #C99A00,0 0 0 3px #fff}
+.lv.lock{opacity:.4}
+.lv.boss{background:linear-gradient(135deg,#FFE0F4,#E6DBFF)}
+/* spelet */
+#game{padding:0;gap:0;justify-content:flex-start;background:transparent}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.top{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:center;gap:8px;z-index:3;pointer-events:none}
+.top .ibtn{pointer-events:auto;flex:none}
+.title{flex:1;text-align:center;color:#fff;font-weight:700;font-size:clamp(22px,6vmin,34px);text-shadow:0 3px 0 #0006;line-height:1.05}
+.title small{display:block;font-size:.5em;opacity:.85}
+.tools{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 10px);display:flex;justify-content:center;gap:clamp(10px,3vw,22px);z-index:3}
+.tool{width:clamp(58px,15vmin,76px);height:clamp(58px,15vmin,76px);border-radius:22px;background:#fffffff0;box-shadow:0 5px 0 #0007;font-size:clamp(26px,7vmin,34px);display:grid;place-items:center;position:relative}
+.tool small{position:absolute;right:-6px;top:-6px;background:#FF3B4E;color:#fff;border-radius:10px;font-size:12px;font-weight:700;padding:1px 6px;line-height:16px}
+.tool.dim{opacity:.35}
+.tool small:empty{display:none}
+.tool:active{transform:translateY(3px);box-shadow:0 2px 0 #0007}
+.toast{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--safe-t) + 70px);background:#000b;color:#fff;font-weight:700;border-radius:14px;padding:6px 14px;z-index:4;pointer-events:none;white-space:nowrap;animation:fin .25s}
+@keyframes fin{from{opacity:0;transform:translate(-50%,-6px)}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+    <button class="me" id="meCard"></button>
+    <div class="menu">
+      <button class="btn green" id="toPlay">▶️ Spela</button>
+      <div class="row2">
+        <button class="btn purple small" id="toLevels">🗺️ Välj nivå</button>
+        <button class="btn white small" id="toHelp">❓ Så spelar man</button>
+      </div>
+      <button class="btn white small" id="toHub">🏠 Alla spel</button>
+    </div>
+  </div>
+</section>
+
+<section id="meScr" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="meBack">⬅️</button><span></span></div>
+  <h2 style="margin-top:58px">Vem spelar?</h2>
+  <p class="hint-txt">Alla har sina egna nivåer</p>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="levels" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Nivåer 🗺️</h2><span style="width:48px"></span></div>
+  <div class="wrap"><div class="lvls" id="lvls"></div></div>
+</section>
+
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="top">
+    <button class="ibtn" id="gBack">⬅️</button>
+    <div class="title" id="title"></div>
+    <button class="ibtn" id="gRestart">🔄</button>
+  </div>
+  <div class="tools">
+    <button class="tool" id="tUndo">↩️<small id="nUndo"></small></button>
+    <button class="tool" id="tHint">💡<small id="nHint"></small></button>
+    <button class="tool" id="tAdd">🧪<small id="nAdd"></small></button>
+  </div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="sort/game.js"></script>
+<script src="sort/app.js"></script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 {
- "version": "31ae869b9acb",
+ "version": "132f1844a6a9",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -125,6 +125,9 @@
   "shared/hs.js",
   "shared/net.js",
   "shared/style.css",
+  "sort.html",
+  "sort/app.js",
+  "sort/game.js",
   "stad.html",
   "stad/app.js",
   "stad/scenes.js",

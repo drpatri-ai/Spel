@@ -33,6 +33,7 @@ const HS_CATS = [
   { k: 'tankMis', ic: '🎖️', n: 'Flest uppdrag klara', u: 'uppdrag' },
   { k: 'opsKills', ic: '🎯', n: 'Flest träffar i Operation Öken', u: 'träffar' },
   { k: 'opsWins', ic: '🏜️', n: 'Flest vunna matcher i Operation Öken', u: 'vinster' },
+  { k: 'sortBest', ic: '🧪', n: 'Högsta nivå i Trolldrycker', u: 'nivåer' },
   { k: 'lvl', ic: '⭐', n: 'Högst nivå sammanlagt', u: 'nivåer' }
 ];
 function hsProf(key, storePrefix, storeKey) {
@@ -57,6 +58,7 @@ function hsCollect() {
   const c = hsCounters();
   S.boxWins = num(c.boxWins); S.tankKills = num(c.tankKills); S.opsKills = num(c.opsKills);
   try { const st = makeStore('bo').get('stats', null); S.opsWins = num(st && st.wins); } catch (e) { }
+  try { S.sortBest = max(Object.values(makeStore('bm').get('prog', {}) || {}).map(p => (p && p.lvl | 0) - 1)); } catch (e) { }
   S.lvl = lvl;
   return S;
 }

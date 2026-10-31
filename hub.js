@@ -26,8 +26,10 @@ const GAMES = [
     stat: () => { const b = makeStore('bx').get('belts', {}); const n = Object.values(b).reduce((a, v) => a + v, 0); return n ? `🏆 ${n} mästarbälten` : ''; } },
   { id: 'tank', title: 'Stridsvagnar', sub: 'Kör pansarvagn och skjut – mot datorn eller familjen', icon: '🪖', c: '#5E8C31', d: '#3E6420',
     stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('tank') || 'null') : makeStore('bw').get('prof', null); } catch (e) { } const m = p && p.mis ? Math.max(0, ...Object.values(p.mis)) : 0; return m ? `🎖️ ${m} uppdrag klara` : ''; } },
-  { id: 'ops', title: 'Operation Öken', sub: 'Röda mot blå i ökenstaden – lägg ut eller desarmera laddningen', icon: '🎯', c: '#D9A441', d: '#A8741E', isNew: true,
-    stat: () => { const s = makeStore('bo').get('stats', null); return s && s.wins ? `🏆 ${s.wins} matcher vunna` : ''; } }
+  { id: 'ops', title: 'Operation Öken', sub: 'Röda mot blå i ökenstaden – lägg ut eller desarmera laddningen', icon: '🎯', c: '#D9A441', d: '#A8741E',
+    stat: () => { const s = makeStore('bo').get('stats', null); return s && s.wins ? `🏆 ${s.wins} matcher vunna` : ''; } },
+  { id: 'sort', title: 'Trolldrycker', sub: 'Häll och sortera de magiska färgerna – en färg per flaska', icon: '🧪', c: '#9B5BFF', d: '#6430C9', isNew: true,
+    stat: () => { const p = makeStore('bm').get('prog', {}) || {}; const m = Math.max(1, ...Object.values(p).map(v => v && v.lvl | 0)); return m > 1 ? `🧪 nivå ${m}` : ''; } }
 ];
 
 let current = 'hub';

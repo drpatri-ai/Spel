@@ -120,7 +120,7 @@ async function buildTop() {
 }
 
 /* ---------- uppdatera appen ---------- */
-const UPDATE_URL = 'https://github.com/drpatri-ai/Spel/releases/download/app/version.json';
+const UPDATE_URL = 'https://drpatri-ai.github.io/Spel/app/version.json';
 let upInfo = null, upManual = false;
 function checkUpdate(manual) {
   if (!(window.Android && Android.checkUpdate)) return;

@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>Bucinca Stridsvagnar</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/favicon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bucinca">
+<meta name="theme-color" content="#3E5A2A">
+<link rel="stylesheet" href="shared/style.css">
+<style>
+body{background:linear-gradient(170deg,#8BC34A 0%,#4E7D2E 45%,#2E3B1F 100%)}
+.hidden{display:none!important}
+.me{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:22px;padding:8px 14px;box-shadow:0 5px 0 #C9C3E8}
+.me .av{width:58px}
+.me b{font-size:19px}
+.me small{display:block;color:var(--muted)}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#2B2350;color:#FFD23F;border-radius:10px;padding:2px 9px;font-weight:700;font-size:14px;white-space:nowrap}
+@media (min-aspect-ratio:5/4) and (max-height:600px){
+  #menu{flex-direction:row;gap:26px}
+  #menu .logo .l1{font-size:42px}#menu .logo .l2{font-size:34px}
+  #menu .menu .btn{padding:9px 18px}
+}
+#menu .menu{gap:10px}
+.row2{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.row2 .btn{min-width:0;flex:1}
+.wrap{width:min(96vw,1000px);display:flex;flex-direction:column;gap:12px;margin-top:64px;padding-bottom:20px}
+.card{background:var(--card);border-radius:22px;padding:12px 14px;box-shadow:0 5px 0 #C9C3E8;display:flex;flex-direction:column;gap:8px}
+.card h4{margin:0;font-size:18px}
+.note{color:var(--muted);font-size:15px;margin:0;line-height:1.35}
+.av.mini{width:64px;flex:none}
+.xpbar{position:relative;height:20px;border-radius:10px;background:#E4E0F7;overflow:hidden;margin-top:4px}
+.xpbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#8BC34A,#34C759)}
+.xpbar span{position:relative;display:block;text-align:center;font-weight:700;font-size:13px;line-height:20px}
+
+/* garage */
+.models{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(46%,200px),1fr));gap:8px}
+.mdl{background:#F6F4FF;border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;position:relative}
+.mdl canvas{width:100%;max-width:150px;aspect-ratio:1.3}
+.mdl b{font-size:16px}
+.mdl small{color:var(--muted);font-size:12px;line-height:1.2}
+.mdl.on{box-shadow:0 0 0 3px #34C759;background:#EFFFF2}
+.mdl.lock{opacity:.5;filter:grayscale(.8)}
+.mdl .lk{position:absolute;top:6px;right:8px;font-size:13px;font-weight:700;background:#2B2350;color:#fff;border-radius:8px;padding:1px 7px}
+.mst{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;font-size:11px;font-weight:600}
+.mst span{background:#fff;border-radius:6px;padding:0 5px}
+.upl{display:flex;flex-direction:column;gap:8px}
+.upr{display:flex;align-items:center;gap:10px;background:#F6F4FF;border-radius:16px;padding:8px 10px}
+.upr .ic{font-size:26px;width:34px;text-align:center}
+.upr .grow{flex:1;min-width:0}
+.upr small{display:block;color:var(--muted);font-size:12px}
+.upr .pips{color:#4E7D2E;letter-spacing:1px;font-size:14px}
+.upr .btn{min-width:0;width:48px;padding:6px 0;font-size:22px;flex:none}
+.gar{display:flex;flex-direction:column;gap:12px}
+@media (min-aspect-ratio:5/4){.gar{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}}
+
+/* uppdrag */
+.ladder{display:flex;flex-direction:column;gap:8px}
+.rung{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:18px;padding:8px 12px;box-shadow:0 4px 0 #C9C3E8}
+.rung .no{font-weight:700;font-size:18px;width:30px;text-align:center;color:var(--muted)}
+.rung .grow{flex:1;min-width:0}
+.rung small{display:block;color:var(--muted);font-size:13px}
+.rung .avs{display:flex}
+.rung .avs .av{width:34px;border-width:2px;margin-left:-8px}
+.rung.done{opacity:.6}
+.rung.next{box-shadow:0 4px 0 #219A40,0 0 0 3px #34C759}
+.rung.locked{filter:grayscale(.7);opacity:.55}
+.rung.boss{background:linear-gradient(90deg,#FFE0D6,#fff)}
+.rung .btn{min-width:0;padding:8px 14px;font-size:15px;border-radius:14px}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.opt b{min-width:110px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{padding:6px 12px;border-radius:12px;background:#F0EDFF;font-weight:700;font-size:15px}
+.seg button.on{background:#2B2350;color:#fff}
+
+/* lobby */
+.plist{display:flex;flex-direction:column;gap:8px}
+.pl{display:flex;align-items:center;gap:10px;background:#F6F4FF;border-radius:16px;padding:6px 10px;font-weight:600}
+.pl .av{width:42px;border-width:3px}
+.pl span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pl.mine{box-shadow:0 0 0 3px #FFD23F}
+.joininfo{display:flex;gap:12px;align-items:center}
+.qr{background:#fff;border-radius:14px;padding:6px;flex:none;line-height:0}
+.qr svg{width:min(34vw,150px);height:auto}
+.url{font-weight:700;font-size:clamp(17px,4.2vmin,24px);white-space:nowrap}
+.ipbox{display:flex;gap:8px}
+.ipbox input{flex:1;min-width:0;font:inherit;font-size:20px;font-weight:600;border:3px solid #E4E0F7;border-radius:14px;padding:8px 12px;color:var(--ink);-webkit-user-select:text;user-select:text}
+.found{display:flex;flex-direction:column;gap:10px}
+.found .btn{min-width:0;width:100%}
+.spin{display:inline-block;animation:spin2 1s linear infinite}
+@keyframes spin2{to{transform:rotate(360deg)}}
+
+/* spelet */
+#game{padding:0;gap:0;background:#2E3B1F;justify-content:flex-start}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+.hud{position:absolute;top:var(--safe-t);left:var(--safe-l);right:var(--safe-r);display:flex;align-items:flex-start;gap:8px;z-index:3;pointer-events:none}
+.hud .ibtn{pointer-events:auto;flex:none;width:42px;height:42px;font-size:20px}
+.mebox{display:flex;align-items:center;gap:6px;background:#0007;border-radius:16px;padding:4px 10px 4px 4px;color:#fff;min-width:0}
+.mebox .av{width:38px;border-width:3px}
+.mebox .bar{width:clamp(80px,22vw,180px);height:14px;border-radius:7px;background:#0008;border:2px solid #fff;overflow:hidden;position:relative}
+.mebox .bar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#FF4D6D,#FFD23F 45%,#34C759)}
+.mebox b{font-size:14px;white-space:nowrap}
+.score{margin-left:auto;background:#0007;color:#fff;border-radius:14px;padding:4px 10px;font-weight:700;font-size:14px;text-align:right;line-height:1.3}
+.score .r{display:flex;align-items:center;gap:5px;justify-content:flex-end;white-space:nowrap}
+.score .r .av{width:20px;border-width:2px}
+.score .r.mine{color:#FFD23F}
+.clock{background:#fffe;border-radius:14px;padding:3px 10px;font-weight:700;font-size:clamp(15px,4vmin,22px);text-align:center;box-shadow:0 3px 0 #0004;line-height:1.1}
+.clock small{display:block;font-size:.55em;color:var(--muted)}
+.feed{position:absolute;left:50%;transform:translateX(-50%);top:calc(var(--safe-t) + 54px);z-index:3;display:flex;flex-direction:column;gap:4px;align-items:center;pointer-events:none}
+.feed div{background:#000a;color:#fff;border-radius:10px;padding:2px 10px;font-weight:600;font-size:14px;animation:fin .3s;white-space:nowrap}
+@keyframes fin{from{opacity:0;transform:translateY(-6px)}}
+.spb{position:absolute;z-index:4;width:clamp(62px,15vmin,86px);height:clamp(62px,15vmin,86px);border-radius:50%;font-size:clamp(28px,7vmin,40px);display:grid;place-items:center;
+  background:conic-gradient(#FFD23F var(--p,100%),#ffffff55 0);box-shadow:0 4px 0 #0006;touch-action:none}
+.spb span{width:82%;height:82%;border-radius:50%;background:#fff;display:grid;place-items:center}
+.spb.ready span{background:radial-gradient(#FFF6C4,#FFD23F)}
+.spb small{position:absolute;bottom:-18px;left:-20px;right:-20px;text-align:center;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 0 #000}
+.bigtxt{position:absolute;left:0;right:0;top:32%;text-align:center;font-weight:700;color:#fff;-webkit-text-stroke:4px var(--ink);paint-order:stroke fill;
+  text-shadow:0 6px 0 var(--ink);pointer-events:none;z-index:5;font-size:clamp(36px,11vmin,92px);line-height:1.05}
+.bigtxt small{display:block;font-size:.4em;-webkit-text-stroke:3px var(--ink)}
+.bigtxt.pop{animation:pop2 .45s cubic-bezier(.2,1.8,.4,1)}
+@keyframes pop2{from{transform:scale(.2);opacity:0}}
+.hint{position:absolute;left:0;right:0;bottom:calc(var(--safe-b) + 6px);text-align:center;color:#fff;font-weight:600;font-size:14px;text-shadow:0 1px 0 #000;pointer-events:none;z-index:3;opacity:.85}
+.rank{display:flex;flex-direction:column;gap:5px;width:100%}
+.rank .r{display:flex;align-items:center;gap:8px;background:#F6F4FF;border-radius:12px;padding:4px 10px;font-weight:600;font-size:15px}
+.rank .r .av{width:32px;border-width:2px}
+.rank .r span{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .r.w{background:#FFF3C4;box-shadow:0 0 0 3px #FFD23F}
+.rank .r.mine{box-shadow:0 0 0 3px #34C759}
+.xpl{display:flex;align-items:center;gap:8px;background:#F6F4FF;border-radius:14px;padding:6px 10px;text-align:left;width:100%}
+.xpl .av{width:42px;border-width:3px;flex:none}
+.lvup{background:#FFD23F;border-radius:8px;padding:1px 7px;font-weight:700;font-size:13px}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+
+<section id="menu" class="screen on">
+  <div class="logo" id="logo"></div>
+  <div style="display:flex;flex-direction:column;align-items:center;gap:10px">
+    <button class="me" id="meCard"></button>
+    <div class="menu">
+      <button class="btn green" id="toMis">🎖️ Uppdrag mot datorn</button>
+      <div class="row2">
+        <button class="btn blue small" id="toQuick">⚔️ Snabbmatch</button>
+        <button class="btn purple small" id="toGar">🔧 Garage</button>
+      </div>
+      <div class="row2">
+        <button class="btn small hidden" id="toHost">📡 Starta nätverksmatch</button>
+        <button class="btn white small" id="toJoin">🔗 Gå med</button>
+      </div>
+      <div class="row2">
+        <button class="btn white small" id="toHelp">❓ Så spelar man</button>
+        <button class="btn white small" id="toHub">🏠 Alla spel</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="meScr" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="meBack">⬅️</button><span></span></div>
+  <h2 style="margin-top:58px" id="meTitle">Vem kör?</h2>
+  <p class="hint-txt">Varje figur har sin egen vagn, nivå och uppgraderingar</p>
+  <div class="chars" id="chars"></div>
+</section>
+
+<section id="garage" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Garage 🔧</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="garBox"></div>
+</section>
+
+<section id="missions" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Uppdrag 🎖️</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="misBox" style="max-width:640px"></div>
+</section>
+
+<section id="quick" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Snabbmatch ⚔️</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="qBox" style="max-width:640px"></div>
+</section>
+
+<section id="join" class="screen scroll">
+  <div class="topbar"><button class="ibtn" data-back>⬅️</button><h2>Gå med 🔗</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="joinBox" style="max-width:560px"></div>
+</section>
+
+<section id="lobby" class="screen scroll">
+  <div class="topbar"><button class="ibtn" id="lobbyBack">⬅️</button><h2>Slagfältet 🪖</h2><span style="width:48px"></span></div>
+  <div class="wrap" id="lobbyBox"></div>
+</section>
+
+<section id="game" class="screen">
+  <canvas id="cv"></canvas>
+  <div class="hud">
+    <button class="ibtn" id="gBack">⏸️</button>
+    <div class="mebox" id="mebox"></div>
+    <div class="clock" id="clock"></div>
+    <div class="score" id="score"></div>
+  </div>
+  <div class="feed" id="feed"></div>
+  <button class="spb" id="spb"><span id="spIc">🛡️</span><small id="spTx">Sköld</small></button>
+  <div class="hint" id="hint">Vänster tumme: kör · Höger tumme: sikta och skjut</div>
+  <div class="bigtxt hidden" id="big"></div>
+</section>
+
+<div class="overlay" id="overlay"><div class="panel" id="panel"></div></div>
+<div id="party"></div>
+<canvas id="confetti"></canvas>
+
+<script src="shared/core.js"></script>
+<script src="boll/qrcode.js"></script>
+<script src="tank/sim.js"></script>
+<script src="tank/app.js"></script>
+</body>
+</html>

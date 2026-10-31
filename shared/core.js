@@ -93,6 +93,7 @@ function netGameOf(name) {
   if (/^krock:/.test(name)) return { page: 'krock.html', label: '💥 ' + name.slice(6) };
   if (/^studs:/.test(name)) return { page: 'studs.html', label: '🎯 ' + name.slice(6) };
   if (/^box:/.test(name)) return { page: 'box.html', label: '🥊 ' + name.slice(4) };
+  if (/^tank:/.test(name)) return { page: 'tank.html', label: '🪖 ' + name.slice(5) };
   return { page: 'boll.html', label: '⚽ ' + name.replace(/^boll:/, '') };
 }
 

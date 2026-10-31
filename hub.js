@@ -22,8 +22,10 @@ const GAMES = [
   { id: 'stad', title: 'Staden', sub: 'Lek med familjen hemma, i parken och i affären', icon: '🏙️', c: '#14C8C8', d: '#0E9A9A', stat: () => '' },
   { id: 'studs', title: 'Studs', sub: 'Sikta, studsa och träffa alla orange pinnar', icon: '🎯', c: '#FF7A12', d: '#D95A00',
     stat: () => { const c = Object.keys(makeStore('bu').get('cleared', {})).length; return c ? `⭐ ${c} banor klara` : ''; } },
-  { id: 'box', title: 'Boxning', sub: 'Familjen i ringen – mästerskap, två spelare och wifi', icon: '🥊', c: '#E53935', d: '#9E1B1B', isNew: true,
-    stat: () => { const b = makeStore('bx').get('belts', {}); const n = Object.values(b).reduce((a, v) => a + v, 0); return n ? `🏆 ${n} mästarbälten` : ''; } }
+  { id: 'box', title: 'Boxning', sub: 'Familjen i ringen – mästerskap, två spelare och wifi', icon: '🥊', c: '#E53935', d: '#9E1B1B',
+    stat: () => { const b = makeStore('bx').get('belts', {}); const n = Object.values(b).reduce((a, v) => a + v, 0); return n ? `🏆 ${n} mästarbälten` : ''; } },
+  { id: 'tank', title: 'Stridsvagnar', sub: 'Kör pansarvagn och skjut – mot datorn eller familjen', icon: '🪖', c: '#5E8C31', d: '#3E6420', isNew: true,
+    stat: () => { let p = null; try { p = window.Android && Android.profGet ? JSON.parse(Android.profGet('tank') || 'null') : makeStore('bw').get('prof', null); } catch (e) { } const m = p && p.mis ? Math.max(0, ...Object.values(p.mis)) : 0; return m ? `🎖️ ${m} uppdrag klara` : ''; } }
 ];
 
 let current = 'hub';

@@ -1,5 +1,5 @@
 {
- "version": "315bc9ce6c21",
+ "version": "108f44353ae2",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -126,6 +126,9 @@
   "studs.html",
   "studs/app.js",
   "studs/sim.js",
+  "tank.html",
+  "tank/app.js",
+  "tank/sim.js",
   "torn.html",
   "torn/app.js"
  ]

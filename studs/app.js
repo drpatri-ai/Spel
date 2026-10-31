@@ -3,7 +3,7 @@
 const store = makeStore('bu');
 const Q = new URLSearchParams(location.search);
 const PORT = 8765;
-const REMOTE = location.protocol === 'http:' && location.port === String(PORT);
+const REMOTE = (location.protocol === 'http:' && location.port === String(PORT)) || !!NET_ONLINE;
 const HOSTPAGE = REMOTE && Q.get('host') === '1';
 const CLIENT = REMOTE && !HOSTPAGE;
 const APP_HOME = 'https://appassets.androidplatform.net/assets/';
@@ -584,7 +584,7 @@ $('gBack').onclick = () => {
 let scanning = false;
 function buildJoin() {
   const app = !!window.Android;
-  $('joinBox').innerHTML = `
+  $('joinBox').innerHTML = netJoinCardHTML('card') + `
     ${app ? `<div class="card"><h4>📡 Matcher i wifi:t</h4><div class="found" id="found"></div><button class="btn white small" id="rescan">🔄 Sök igen</button></div>` : ''}
     <div class="card"><h4>🔢 Skriv in adressen</h4>
       <p class="note">${app ? 'Hittas inte matchen? Skriv adressen som står på värdens skärm.' : 'Matchen startas i Android-appen (📡 Starta nätverksmatch). Skanna QR-koden på värdens skärm med kameran, eller skriv adressen här.'}</p>
@@ -596,7 +596,8 @@ function buildJoin() {
     if (!/^\d+\.\d+\.\d+\.\d+$/.test(v)) { $('ipIn').style.borderColor = '#FF4D6D'; SFX.bonk(); return; }
     store.set('lastIp', v); goJoin(v, port, 'studs.html');
   };
-  if (app) { $('rescan').onclick = () => { SFX.tap(); scan(); }; scan(); }
+netBindJoinCard((page, code) => `${page}?online=${encodeURIComponent(code)}&n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}&back=${encodeURIComponent(location.href.split('?')[0])}`);
+    if (app) { $('rescan').onclick = () => { SFX.tap(); scan(); }; scan(); }
 }
 function scan() {
   if (!window.Android || !Android.netScan || scanning) return;
@@ -615,6 +616,7 @@ function goJoin(ip, port, page) {
   const back = location.href.split('?')[0];
   location.href = `http://${ip}:${port || PORT}/${page}?n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}&back=${encodeURIComponent(back)}`;
 }
+function startOnline() { location.href = netOnlineHostURL('studs.html', `n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}`); }
 function startHosting() {
   let r = null;
   try { r = JSON.parse(Android.netHost('studs:' + charName(ME.ch) + 's match')); } catch (e) { }
@@ -625,12 +627,13 @@ function leave() {
   if (G.mode === 'host') {
     try { HOST.ws && HOST.ws.close(); } catch (e) { } HOST.ws = null;
     try { Android.netStop(); } catch (e) { }
-    location.href = APP_HOME + 'studs.html'; return;
+    location.href = NET_ONLINE ? 'studs.html' : APP_HOME + 'studs.html'; return;
   }
   if (CLIENT) {
     CL.closing = true; try { CL.ws && CL.ws.close(); } catch (e) { }
     const back = Q.get('back');
     if (back && /^https?:\/\//.test(back)) location.href = back;
+    else if (NET_ONLINE) location.href = 'studs.html';
     else if (window.Android) location.href = APP_HOME + 'studs.html';
     else { G.mode = 'solo'; show('menu'); }
     return;
@@ -646,7 +649,7 @@ function hostStart() {
   hostConnect(); show('lobby');
 }
 function hostConnect() {
-  const ws = new WebSocket(`ws://${location.host}/ws?host=1`);
+  const ws = netSocket(true);
   HOST.ws = ws;
   ws.onopen = () => { HOST.ok = true; buildLobby(); };
   ws.onmessage = e => hostRecv(e.data);
@@ -717,7 +720,7 @@ function clientStart() {
 }
 function clientConnect() {
   CL.closing = false;
-  const ws = new WebSocket(`ws://${location.host}/ws`);
+  const ws = netSocket(false);
   CL.ws = ws;
   panel(`<h3>Ansluter… <span class="spin">🎯</span></h3>`);
   ws.onopen = () => { CL.tries = 0; closePanel(); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch })); if (current !== 'game') show('lobby'); };
@@ -762,6 +765,7 @@ function buildLobby() {
       <p class="note">Android med appen: Studs → 🔗 Gå med.</p>` : `<p class="note">⚠️ Hittar inget wifi. Anslut till wifi (eller slå på surfzon) och tryck 🔄.</p><button class="btn white small" id="reIp">🔄 Uppdatera</button>`}</div>`;
   }
   const lv = LEVELS[L.lv || 0];
+  if (isHost && NET_ONLINE) side = netHostCardHTML('studs.html', 'card', HOST.ok);
   $('lobbyBox').innerHTML = `<div class="gar"><div class="card"><h4>🎯 Spelare (${L.players.length})</h4><div class="plist">${pls || '<p class="note">Ingen här än…</p>'}</div>
       <h4>Bana</h4>
       ${isHost ? `<div class="lvpick"><button class="ibtn" id="lvP">◀</button><b>${lv.ic} ${lv.name}</b><button class="ibtn" id="lvN">▶</button></div>` : `<div class="lvpick"><b>${lv.ic} ${lv.name}</b></div>`}
@@ -798,6 +802,7 @@ $('toSolo').onclick = () => { SFX.tap(); showLevels('solo'); };
 $('toLocal').onclick = () => { SFX.tap(); locPick = locPick.length ? locPick : [ME.ch]; buildLocal(); show('local'); };
 $('toJoin').onclick = () => { SFX.tap(); show('join'); };
 $('toHost').onclick = () => { SFX.tap(); startHosting(); };
+$('toOnline').onclick = () => { SFX.tap(); startOnline(); };
 $('toHelp').onclick = () => { SFX.tap(); help(); };
 $('toHub').onclick = () => { SFX.tap(); goHub(); };
 

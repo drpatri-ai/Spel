@@ -3,7 +3,7 @@
 const store = makeStore('bw');
 const Q = new URLSearchParams(location.search);
 const PORT = 8765;
-const REMOTE = location.protocol === 'http:' && location.port === String(PORT);
+const REMOTE = (location.protocol === 'http:' && location.port === String(PORT)) || !!NET_ONLINE;
 const HOSTPAGE = REMOTE && Q.get('host') === '1';
 const CLIENT = REMOTE && !HOSTPAGE;
 const APP_HOME = 'https://appassets.androidplatform.net/assets/';
@@ -753,7 +753,7 @@ function drawMini(s) {
 let scanning = false;
 function buildJoin() {
   const app = !!window.Android;
-  $('joinBox').innerHTML = `
+  $('joinBox').innerHTML = netJoinCardHTML('card') + `
     ${app ? `<div class="card"><h4>📡 Matcher i wifi:t</h4><div class="found" id="found"></div><button class="btn white small" id="rescan">🔄 Sök igen</button></div>` : ''}
     <div class="card"><h4>🔢 Skriv in adressen</h4>
       <p class="note">${app ? 'Hittas inte matchen? Skriv adressen som står på värdens skärm.' : 'Matchen startas i Android-appen (📡 Starta nätverksmatch). Skanna QR-koden på värdens skärm med kameran, eller skriv adressen här.'}</p>
@@ -765,7 +765,8 @@ function buildJoin() {
     if (!/^\d+\.\d+\.\d+\.\d+$/.test(v)) { $('ipIn').style.borderColor = '#FF4D6D'; SFX.bonk(); return; }
     store.set('lastIp', v); goJoin(v, port, 'tank.html');
   };
-  if (app) { $('rescan').onclick = () => { SFX.tap(); scan(); }; scan(); }
+netBindJoinCard((page, code) => `${page}?online=${encodeURIComponent(code)}&n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}&back=${encodeURIComponent(location.href.split('?')[0])}`);
+    if (app) { $('rescan').onclick = () => { SFX.tap(); scan(); }; scan(); }
 }
 function scan() {
   if (!window.Android || !Android.netScan || scanning) return;
@@ -784,6 +785,7 @@ function goJoin(ip, port, page) {
   const back = location.href.split('?')[0];
   location.href = `http://${ip}:${port || PORT}/${page}?n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}&back=${encodeURIComponent(back)}`;
 }
+function startOnline() { location.href = netOnlineHostURL('tank.html', `n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}`); }
 function startHosting() {
   let r = null;
   try { r = JSON.parse(Android.netHost('tank:' + charName(ME.ch) + 's slagfält')); } catch (e) { }
@@ -794,12 +796,13 @@ function leave() {
   if (G.mode === 'host' || HOSTPAGE) {
     try { HOST.ws && HOST.ws.close(); } catch (e) { } HOST.ws = null;
     try { Android.netStop(); } catch (e) { }
-    location.href = APP_HOME + 'tank.html'; return;
+    location.href = NET_ONLINE ? 'tank.html' : APP_HOME + 'tank.html'; return;
   }
   if (CLIENT) {
     CL.closing = true; try { CL.ws && CL.ws.close(); } catch (e) { }
     const back = Q.get('back');
     if (back && /^https?:\/\//.test(back)) location.href = back;
+    else if (NET_ONLINE) location.href = 'tank.html';
     else if (window.Android) location.href = APP_HOME + 'tank.html';
     else { G.mode = 'local'; show('menu'); }
     return;
@@ -817,7 +820,7 @@ function hostStart() {
   hostConnect(); show('lobby');
 }
 function hostConnect() {
-  const ws = new WebSocket(`ws://${location.host}/ws?host=1`);
+  const ws = netSocket(true);
   HOST.ws = ws;
   ws.onopen = () => { HOST.ok = true; buildLobby(); };
   ws.onmessage = e => hostRecv(e.data);
@@ -873,7 +876,7 @@ const CL = { ws: null, id: null, lobby: null, closing: false, tries: 0 };
 function clientStart() { G.mode = 'client'; pickFigure('Vem kör?', clientConnect, leave); }
 function clientConnect() {
   CL.closing = false;
-  const ws = new WebSocket(`ws://${location.host}/ws`);
+  const ws = netSocket(false);
   CL.ws = ws;
   panel(`<h3>Ansluter… <span class="spin">🪖</span></h3>`);
   ws.onopen = () => { CL.tries = 0; closePanel(); const f = figOf(ME.ch); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch, model: f.model, up: f.up, weapon: f.weapon, wlvl: f.wl[f.weapon] })); if (current !== 'game') show('lobby'); };
@@ -915,6 +918,7 @@ function buildLobby() {
   const sets = isHost ? `<div class="opts">${seg('mode', MODES, S.mode, '🎮 Läge')}${seg('map', MAPS.map((m, i) => [i, m.name]), S.map, '🗺️ Bana')}${seg('kl', LIMITS[S.mode].map((v, i) => [i, String(v)]), S.kl, `🎯 ${LIMIT_TXT[S.mode]}`)}
       ${seg('bots', [[0, 'Inga'], [1, '1'], [2, '2'], [3, '3'], [4, '4']], S.bots, '🤖 Datorvagnar')}${S.bots ? seg('diff', DIFF.map((d, i) => [i, d.n]), S.diff, '⭐ Datorns nivå') : ''}</div>`
     : `<p class="note">🎮 ${MODES.find(m => m[0] === S.mode)[1]} · 🗺️ ${MAPS[S.map].name} · 🎯 först till ${limitOf(S.mode, S.kl)} ${LIMIT_TXT[S.mode]}${S.bots ? ` · 🤖 ${S.bots} datorvagnar` : ''}</p>`;
+  if (isHost && NET_ONLINE) side = netHostCardHTML('tank.html', 'card', HOST.ok);
   $('lobbyBox').innerHTML = `<div class="gar"><div class="card"><h4>🪖 Förare (${L.players.length})</h4><div class="plist">${pls || '<p class="note">Ingen här än…</p>'}</div>
       ${sets}
       ${isHost ? `<button class="btn green" id="gStart" ${HOST.ok && !L.inGame ? '' : 'disabled'}>🪖 Starta matchen!</button>` : `<p class="wait" style="text-align:center;font-weight:600">${L.inGame ? 'Matchen pågår… du hoppar in strax 🪖' : `Väntar på att ${esc(L.host || 'värden')} startar ⏳`}</p>`}
@@ -953,6 +957,7 @@ $('toQuick').onclick = () => { SFX.tap(); show('quick'); };
 $('toGar').onclick = () => { SFX.tap(); show('garage'); };
 $('toJoin').onclick = () => { SFX.tap(); show('join'); };
 $('toHost').onclick = () => { SFX.tap(); startHosting(); };
+$('toOnline').onclick = () => { SFX.tap(); startOnline(); };
 $('toHelp').onclick = () => { SFX.tap(); help(); };
 $('toHub').onclick = () => { SFX.tap(); goHub(); };
 

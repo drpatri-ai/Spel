@@ -3,7 +3,7 @@
 const store = makeStore('bx');
 const Q = new URLSearchParams(location.search);
 const PORT = 8765;
-const REMOTE = location.protocol === 'http:' && location.port === String(PORT);
+const REMOTE = (location.protocol === 'http:' && location.port === String(PORT)) || !!NET_ONLINE;
 const HOSTPAGE = REMOTE && Q.get('host') === '1';
 const CLIENT = REMOTE && !HOSTPAGE;
 const APP_HOME = 'https://appassets.androidplatform.net/assets/';
@@ -659,7 +659,7 @@ function rr(x, y, w, h, r) { cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo(x + w
 let scanning = false;
 function buildJoin() {
   const app = !!window.Android;
-  $('joinBox').innerHTML = `
+  $('joinBox').innerHTML = netJoinCardHTML('card') + `
     ${app ? `<div class="card"><h4>📡 Matcher i wifi:t</h4><div class="found" id="found"></div><button class="btn white small" id="rescan">🔄 Sök igen</button></div>` : ''}
     <div class="card"><h4>🔢 Skriv in adressen</h4>
       <p class="note">${app ? 'Hittas inte matchen? Skriv adressen som står på värdens skärm.' : 'Galan startas i Android-appen (📡 Starta nätverksmatch). Skanna QR-koden på värdens skärm med kameran, eller skriv adressen här.'}</p>
@@ -671,7 +671,8 @@ function buildJoin() {
     if (!/^\d+\.\d+\.\d+\.\d+$/.test(v)) { $('ipIn').style.borderColor = '#FF4D6D'; SFX.bonk(); return; }
     store.set('lastIp', v); goJoin(v, port, 'box.html');
   };
-  if (app) { $('rescan').onclick = () => { SFX.tap(); scan(); }; scan(); }
+netBindJoinCard((page, code) => `${page}?online=${encodeURIComponent(code)}&n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}&back=${encodeURIComponent(location.href.split('?')[0])}`);
+    if (app) { $('rescan').onclick = () => { SFX.tap(); scan(); }; scan(); }
 }
 function scan() {
   if (!window.Android || !Android.netScan || scanning) return;
@@ -690,6 +691,7 @@ function goJoin(ip, port, page) {
   const back = location.href.split('?')[0];
   location.href = `http://${ip}:${port || PORT}/${page}?n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}&back=${encodeURIComponent(back)}`;
 }
+function startOnline() { location.href = netOnlineHostURL('box.html', `n=${encodeURIComponent(charName(ME.ch))}&c=${ME.ch}`); }
 function startHosting() {
   let r = null;
   try { r = JSON.parse(Android.netHost('box:' + charName(ME.ch) + 's gala')); } catch (e) { }
@@ -700,12 +702,13 @@ function leave() {
   if (G.mode === 'host' || HOSTPAGE) {
     try { HOST.ws && HOST.ws.close(); } catch (e) { } HOST.ws = null;
     try { Android.netStop(); } catch (e) { }
-    location.href = APP_HOME + 'box.html'; return;
+    location.href = NET_ONLINE ? 'box.html' : APP_HOME + 'box.html'; return;
   }
   if (CLIENT) {
     CL.closing = true; try { CL.ws && CL.ws.close(); } catch (e) { }
     const back = Q.get('back');
     if (back && /^https?:\/\//.test(back)) location.href = back;
+    else if (NET_ONLINE) location.href = 'box.html';
     else if (window.Android) location.href = APP_HOME + 'box.html';
     else { G.mode = 'ai'; show('menu'); }
     return;
@@ -721,7 +724,7 @@ function hostStart() {
   hostConnect(); show('lobby');
 }
 function hostConnect() {
-  const ws = new WebSocket(`ws://${location.host}/ws?host=1`);
+  const ws = netSocket(true);
   HOST.ws = ws;
   ws.onopen = () => { HOST.ok = true; buildLobby(); };
   ws.onmessage = e => hostRecv(e.data);
@@ -783,7 +786,7 @@ const CL = { ws: null, id: null, lobby: null, closing: false, tries: 0 };
 function clientStart() { G.mode = 'client'; pickFigure('Vem boxas?', clientConnect, leave); }
 function clientConnect() {
   CL.closing = false;
-  const ws = new WebSocket(`ws://${location.host}/ws`);
+  const ws = netSocket(false);
   CL.ws = ws;
   panel(`<h3>Ansluter… <span class="spin">🥊</span></h3>`);
   ws.onopen = () => { CL.tries = 0; closePanel(); ws.send(JSON.stringify({ t: 'hi', name: myName(), ch: ME.ch, up: upOf(ME.ch) })); if (current !== 'fight') show('lobby'); };
@@ -829,6 +832,7 @@ function buildLobby() {
     side = `<div class="card"><h4>📲 Bjud in familjen</h4>${url ? `<div class="joininfo"><div class="qr">${qr}</div><div><p class="note">iPhone/iPad: skanna med kameran eller öppna i Safari:</p><div class="url">${esc(url.replace(/^http:\/\//, ''))}</div></div></div>
       <p class="note">Android med appen: Boxning → 🔗 Gå med.</p>` : `<p class="note">⚠️ Hittar inget wifi. Anslut till wifi (eller slå på surfzon) och tryck 🔄.</p><button class="btn white small" id="reIp">🔄 Uppdatera</button>`}</div>`;
   }
+  if (isHost && NET_ONLINE) side = netHostCardHTML('box.html', 'card', HOST.ok);
   $('lobbyBox').innerHTML = `<div class="gar"><div class="card"><h4>🥊 Boxare (${L.players.length})</h4><div class="plist">${pls || '<p class="note">Ingen här än…</p>'}</div>
       ${nx}
       ${isHost ? `<button class="btn green" id="gStart" ${HOST.ok && !L.inGame && L.players.length >= 2 ? '' : 'disabled'}>🔔 Starta matchen!</button>` : `<p class="wait" style="text-align:center;font-weight:600">${L.inGame ? 'Match pågår… 🥊' : `Väntar på att ${esc(L.host || 'värden')} startar ⏳`}</p>`}
@@ -862,6 +866,7 @@ $('toQuick').onclick = () => { SFX.tap(); buildQuick(); show('quick'); };
 $('toDuo').onclick = () => { SFX.tap(); duoPick = []; buildDuo(); show('duo'); };
 $('toJoin').onclick = () => { SFX.tap(); show('join'); };
 $('toHost').onclick = () => { SFX.tap(); startHosting(); };
+$('toOnline').onclick = () => { SFX.tap(); startOnline(); };
 $('toHelp').onclick = () => { SFX.tap(); help(); };
 $('toTrain').onclick = () => { SFX.tap(); show('train'); };
 $('toHub').onclick = () => { SFX.tap(); goHub(); };

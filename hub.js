@@ -68,11 +68,26 @@ function buildSet() {
 
 $('toChars').onclick = () => { CORE_SFX.tap(); show('chars'); };
 $('toSettings').onclick = () => { CORE_SFX.tap(); show('settings'); };
+// internetmatch: skriv värdens kod så öppnas rätt spel
+$('toCode').onclick = () => {
+  CORE_SFX.tap();
+  $('panel').innerHTML = `<h3>🌍 Internetmatch</h3><p>Skriv koden som står hos värden, t.ex. KATT-42.</p>
+    <input id="hubCode" type="text" autocapitalize="characters" autocomplete="off" placeholder="KATT-42" style="font:inherit;font-size:26px;font-weight:700;text-align:center;width:100%;border:3px solid #E4E0F7;border-radius:14px;padding:8px;-webkit-user-select:text;user-select:text">
+    <p id="hubMsg" style="font-size:15px"></p><button class="btn green" id="hubGo">Gå med</button><button class="btn white small" id="hubNo">Avbryt</button>`;
+  $('overlay').classList.add('on');
+  const go = () => netOnlineJoin($('hubCode').value, (page, code) => `${page}?online=${encodeURIComponent(code)}&back=${encodeURIComponent(location.href.split('?')[0])}`, st => {
+    $('hubMsg').textContent = st === 'wait' ? '🌍 Letar efter matchen…' : st === 'bad' ? 'Skriv koden som står hos värden.' : st === 'lib' ? 'Kunde inte ladda internetdelen – är du uppkopplad?' : '😕 Hittade ingen match med den koden.';
+  });
+  $('hubGo').onclick = go; $('hubCode').onkeydown = e => { if (e.key === 'Enter') go(); };
+  $('hubNo').onclick = () => $('overlay').classList.remove('on');
+  setTimeout(() => $('hubCode').focus(), 100);
+};
 document.querySelectorAll('[data-back]').forEach(b => b.onclick = () => { CORE_SFX.tap(); show('hub'); });
 
 // Android-bakåtknappen: på startsidan stängs appen
 window.onBack = function () {
   if ($('party').classList.contains('on')) { $('party').click(); return true; }
+  if ($('overlay').classList.contains('on')) { $('overlay').classList.remove('on'); return true; }
   if (current !== 'hub') { show('hub'); return true; }
   return false;
 };

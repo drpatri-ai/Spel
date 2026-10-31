@@ -1,5 +1,5 @@
 {
- "version": "bff18048470b",
+ "version": "2d3054ef058e",
  "files": [
   "./",
   "avatars/1.jpg",
@@ -121,7 +121,6 @@
   "shared/core.js",
   "shared/hs.js",
   "shared/net.js",
-  "shared/peerjs.min.js",
   "shared/style.css",
   "stad.html",
   "stad/app.js",

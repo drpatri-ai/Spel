@@ -571,6 +571,7 @@ function clientStart() {
   pickFigure('Vem kör?', clientConnect);
 }
 function clientConnect() {
+  if (CL.ws && CL.ws.readyState < 2 && !CL.closing) return;   // redan på väg in
   CL.closing = false;
   const ws = netSocket(false);
   CL.ws = ws;
